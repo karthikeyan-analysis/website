@@ -3,7 +3,7 @@ import {
   formatMultiline,
   getAdminEmail,
   safeSendMail,
-} from "../_lib/mailer";
+} from "../_lib/mailer.js";
 
 async function sendContactConfirmation({
   name,

@@ -1,4 +1,4 @@
-import { getAdminDb } from "../_lib/firebaseAdmin";
+import { getAdminDb } from "../_lib/firebaseAdmin.js";
 
 function categoriesCollection() {
   const db = getAdminDb();

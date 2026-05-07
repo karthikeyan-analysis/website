@@ -1,6 +1,11 @@
 import crypto from "crypto";
-import { getAdminDb } from "../../_lib/firebaseAdmin";
-import { getAdminEmail, safeSendMail, escapeHtml, formatMultiline } from "../../_lib/mailer";
+import { getAdminDb } from "../../_lib/firebaseAdmin.js";
+import {
+  getAdminEmail,
+  safeSendMail,
+  escapeHtml,
+  formatMultiline,
+} from "../../_lib/mailer.js";
 
 function normalizeItems(rawItems) {
   if (!Array.isArray(rawItems)) return [];

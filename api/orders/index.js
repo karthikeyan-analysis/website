@@ -3,8 +3,8 @@ import {
   formatMultiline,
   getAdminEmail,
   safeSendMail,
-} from "../_lib/mailer";
-import { getAdminDb } from "../_lib/firebaseAdmin";
+} from "../_lib/mailer.js";
+import { getAdminDb } from "../_lib/firebaseAdmin.js";
 
 function normalizeItems(rawItems) {
   if (!Array.isArray(rawItems)) return [];
