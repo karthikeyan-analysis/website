@@ -1,0 +1,54 @@
+# Robots.txt for Karthikeyan Analysis
+# https://karthikeyananalysis.in
+
+# Allow all search engines
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /admin/login
+Disallow: /admin/dashboard
+Disallow: /admin/products
+Disallow: /admin/orders
+Disallow: /admin/contacts
+Disallow: /.env
+Disallow: /.env.example
+Disallow: /node_modules/
+Disallow: /dist/
+Disallow: /.git/
+Disallow: /src/
+
+# Specific rules for Google
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 1
+
+# Specific rules for Bing
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 1
+
+# Specific rules for other bots
+User-agent: SemrushBot
+Allow: /
+
+User-agent: AhrefsBot
+Allow: /
+
+User-agent: MJ12bot
+Allow: /
+
+# Bad bots - block them
+User-agent: BadBot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /
+
+# Specify sitemap
+Sitemap: https://karthikeyananalysis.in/sitemap.xml
+
+# Crawl delay (in seconds)
+Crawl-delay: 1
+
+# Request-rate (requests per hour)
+Request-rate: 30/1h
