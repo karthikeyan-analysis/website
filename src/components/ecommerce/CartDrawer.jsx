@@ -15,7 +15,19 @@ export default function CartDrawer() {
   const [step, setStep] = useState('cart') // cart | checkout | success
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [customer, setCustomer] = useState({ name: '', email: '', phone: '', address: '' })
+  const [customer, setCustomer] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    altPhone: '',
+    addressLine1: '',
+    addressLine2: '',
+    area: '',
+    city: '',
+    state: '',
+    pincode: '',
+    landmark: '',
+  })
 
   const amount = useMemo(() => Number(subtotal || 0), [subtotal])
 
@@ -70,7 +82,19 @@ export default function CartDrawer() {
           contact: customer.phone,
         },
         notes: {
-          address: customer.address,
+          address: [
+            customer.addressLine1,
+            customer.addressLine2,
+            customer.area,
+            customer.city,
+            customer.state,
+            customer.pincode ? `Pincode: ${customer.pincode}` : '',
+            customer.landmark ? `Landmark: ${customer.landmark}` : '',
+            customer.altPhone ? `Alt phone: ${customer.altPhone}` : '',
+          ]
+            .map((s) => String(s || '').trim())
+            .filter(Boolean)
+            .join(', '),
         },
         handler: async (response) => {
           try {
@@ -82,7 +106,19 @@ export default function CartDrawer() {
                 email: customer.email,
                 phone: customer.phone,
               },
-              address: customer.address,
+              address: [
+                customer.addressLine1,
+                customer.addressLine2,
+                customer.area,
+                customer.city,
+                customer.state,
+                customer.pincode ? `Pincode: ${customer.pincode}` : '',
+                customer.landmark ? `Landmark: ${customer.landmark}` : '',
+                customer.altPhone ? `Alt phone: ${customer.altPhone}` : '',
+              ]
+                .map((s) => String(s || '').trim())
+                .filter(Boolean)
+                .join(', '),
               cart: items.map((i) => ({ name: i.name, quantity: i.qty, price: i.price })),
               total: amount,
             })
@@ -197,13 +233,50 @@ export default function CartDrawer() {
                 <label className="mb-1 block text-xs font-semibold text-brand-black/70">Email</label>
                 <input type="email" value={customer.email} onChange={(e) => setCustomer((p) => ({ ...p, email: e.target.value }))} className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-navy/20" />
               </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-brand-black/70">Phone</label>
+                  <input value={customer.phone} onChange={(e) => setCustomer((p) => ({ ...p, phone: e.target.value }))} className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-navy/20" placeholder="Primary number" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-brand-black/70">Alternate phone (optional)</label>
+                  <input value={customer.altPhone} onChange={(e) => setCustomer((p) => ({ ...p, altPhone: e.target.value }))} className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-navy/20" placeholder="Alternate number" />
+                </div>
+              </div>
+
               <div>
-                <label className="mb-1 block text-xs font-semibold text-brand-black/70">Phone</label>
-                <input value={customer.phone} onChange={(e) => setCustomer((p) => ({ ...p, phone: e.target.value }))} className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-navy/20" />
+                <label className="mb-1 block text-xs font-semibold text-brand-black/70">Address line 1</label>
+                <input value={customer.addressLine1} onChange={(e) => setCustomer((p) => ({ ...p, addressLine1: e.target.value }))} className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-navy/20" placeholder="House/Flat No, Street" />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-semibold text-brand-black/70">Delivery address</label>
-                <textarea rows={3} value={customer.address} onChange={(e) => setCustomer((p) => ({ ...p, address: e.target.value }))} className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-navy/20" />
+                <label className="mb-1 block text-xs font-semibold text-brand-black/70">Address line 2 (optional)</label>
+                <input value={customer.addressLine2} onChange={(e) => setCustomer((p) => ({ ...p, addressLine2: e.target.value }))} className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-navy/20" placeholder="Apartment, Floor, etc." />
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-brand-black/70">Area / Locality</label>
+                  <input value={customer.area} onChange={(e) => setCustomer((p) => ({ ...p, area: e.target.value }))} className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-navy/20" placeholder="Area / Locality" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-brand-black/70">Landmark (optional)</label>
+                  <input value={customer.landmark} onChange={(e) => setCustomer((p) => ({ ...p, landmark: e.target.value }))} className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-navy/20" placeholder="Near..." />
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-brand-black/70">City</label>
+                  <input value={customer.city} onChange={(e) => setCustomer((p) => ({ ...p, city: e.target.value }))} className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-navy/20" placeholder="City" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-brand-black/70">State</label>
+                  <input value={customer.state} onChange={(e) => setCustomer((p) => ({ ...p, state: e.target.value }))} className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-navy/20" placeholder="State" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-brand-black/70">Pincode</label>
+                  <input inputMode="numeric" value={customer.pincode} onChange={(e) => setCustomer((p) => ({ ...p, pincode: e.target.value }))} className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-navy/20" placeholder="600034" />
+                </div>
               </div>
             </div>
           ) : (
