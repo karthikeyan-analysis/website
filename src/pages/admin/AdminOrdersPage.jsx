@@ -5,12 +5,13 @@ import { ordersService } from "../../services/firebaseService";
 
 function formatDate(value) {
   if (!value) return "-";
-  const date =
-    typeof value === "string" || value instanceof Date
-      ? new Date(value)
-      : value?._seconds
-        ? new Date(value._seconds * 1000)
-        : null;
+  const date = (() => {
+    if (typeof value === "string" || value instanceof Date) return new Date(value);
+    if (typeof value?.toDate === "function") return value.toDate();
+    if (value?.seconds) return new Date(value.seconds * 1000);
+    if (value?._seconds) return new Date(value._seconds * 1000);
+    return null;
+  })();
   if (!date || Number.isNaN(date.getTime())) return "-";
   return date.toLocaleString();
 }
@@ -19,6 +20,25 @@ function formatMoney(value) {
   const n = Number(value || 0);
   if (!Number.isFinite(n)) return "0.00";
   return n.toFixed(2);
+}
+
+function getAddressText(order) {
+  if (order?.address) return order.address;
+  const shipping = order?.shippingAddress;
+  if (!shipping || typeof shipping !== "object") return "-";
+
+  const parts = [
+    shipping.addressLine1,
+    shipping.addressLine2,
+    shipping.area,
+    shipping.city,
+    shipping.state,
+    shipping.pincode ? `Pincode: ${shipping.pincode}` : "",
+    shipping.landmark ? `Landmark: ${shipping.landmark}` : "",
+    shipping.altPhone ? `Alt phone: ${shipping.altPhone}` : "",
+  ].filter(Boolean);
+
+  return parts.length ? parts.join(", ") : "-";
 }
 
 export default function AdminOrdersPage() {
@@ -127,7 +147,12 @@ export default function AdminOrdersPage() {
                   {orders.map((order) => (
                     <tr key={order.id} className="border-b hover:bg-gray-50">
                       <td className="px-6 py-4 text-sm font-semibold text-gray-900">
-                        #{order.id}
+                        <div className="font-semibold text-gray-900">#{order.id}</div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {order.razorpay_payment_id
+                            ? `Payment: ${order.razorpay_payment_id}`
+                            : "Payment: -"}
+                        </div>
                       </td>
                       <td className="px-6 py-4 text-sm">
                         <div className="text-gray-900 font-medium">
@@ -135,6 +160,9 @@ export default function AdminOrdersPage() {
                         </div>
                         <div className="text-gray-500 text-xs">
                           {order.customerEmail || "-"}
+                        </div>
+                        <div className="text-gray-500 text-xs">
+                          {order.customerPhone || "-"}
                         </div>
                       </td>
                       <td className="px-6 py-4 text-sm font-semibold text-gray-900">
@@ -229,7 +257,7 @@ export default function AdminOrdersPage() {
                   DELIVERY ADDRESS
                 </p>
                 <p className="text-gray-900 font-medium">
-                  {selectedOrder.address || "-"}
+                  {getAddressText(selectedOrder)}
                 </p>
               </div>
 
@@ -296,6 +324,9 @@ export default function AdminOrdersPage() {
                   <option value="Completed">Completed</option>
                   <option value="Cancelled">Cancelled</option>
                 </select>
+                <p className="text-xs text-gray-500">
+                  Customer gets an email for every status change.
+                </p>
               </div>
 
               <div className="flex gap-3">

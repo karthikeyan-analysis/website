@@ -132,6 +132,27 @@ export const ordersAPI = {
       method: "DELETE",
     });
   },
+
+  async sendConfirmationEmail(order) {
+    return apiCall("/orders", {
+      method: "POST",
+      body: JSON.stringify({
+        _action: "sendConfirmationEmail",
+        order,
+      }),
+    });
+  },
+
+  async sendStatusEmail(order, status) {
+    return apiCall("/orders", {
+      method: "POST",
+      body: JSON.stringify({
+        _action: "sendStatusEmail",
+        order,
+        status,
+      }),
+    });
+  },
 };
 
 // Products API

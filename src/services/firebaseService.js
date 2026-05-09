@@ -288,6 +288,24 @@ export const categoriesService = {
 
 // Orders Service (uses API)
 export const ordersService = {
+  async sendOrderConfirmationEmail(order) {
+    try {
+      return await ordersAPI.sendConfirmationEmail(order);
+    } catch (error) {
+      console.error("Error sending order confirmation email:", error);
+      return { success: false, emailSent: false, error: error.message };
+    }
+  },
+
+  async sendOrderStatusEmail(order, status) {
+    try {
+      return await ordersAPI.sendStatusEmail(order, status);
+    } catch (error) {
+      console.error("Error sending order status email:", error);
+      return { success: false, emailSent: false, error: error.message };
+    }
+  },
+
   async createOrder(orderData) {
     try {
       const now = new Date();
@@ -337,7 +355,9 @@ export const ordersService = {
       const ref = doc(db, "orders", String(id));
       await updateDoc(ref, { ...statusData, updatedAt: new Date() });
       const snap = await getDoc(ref);
-      return snap.exists() ? { id: snap.id, ...snap.data() } : { id };
+      const updatedOrder = snap.exists() ? { id: snap.id, ...snap.data() } : { id };
+      await ordersService.sendOrderStatusEmail(updatedOrder, statusData?.status);
+      return updatedOrder;
     } catch (error) {
       console.error("Error updating order status:", error);
       throw error;

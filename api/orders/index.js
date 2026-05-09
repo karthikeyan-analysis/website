@@ -121,6 +121,33 @@ async function sendAdminOrderNotification({
   });
 }
 
+async function sendOrderStatusEmail({
+  orderId,
+  customerName,
+  customerEmail,
+  status,
+}) {
+  const statusText = String(status || "Updated");
+  const htmlContent = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #10197E;">Order Status Update</h2>
+      <p>Dear ${escapeHtml(customerName || "Customer")},</p>
+      <p>Your order <strong>${escapeHtml(orderId)}</strong> status is now:</p>
+      <p style="font-size: 16px; font-weight: 700; color: #10197E;">${escapeHtml(statusText)}</p>
+      <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+      <p>Thank you for shopping with us.</p>
+      <p>Best regards,<br>Karthikeyan Analysis Team</p>
+    </div>
+  `;
+
+  await safeSendMail({
+    to: customerEmail,
+    subject: `Order ${orderId} • Status: ${statusText}`,
+    html: htmlContent,
+    replyTo: getAdminEmail(),
+  });
+}
+
 function ordersCollection() {
   const db = getAdminDb();
   return db.collection("orders");
@@ -150,6 +177,63 @@ export default async function handler(req, res) {
       const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       res.status(200).json(rows);
     } else if (req.method === "POST") {
+      const { _action } = req.body || {};
+
+      if (_action === "sendConfirmationEmail") {
+        const order = req.body?.order || {};
+        const orderId = String(order.id || "").trim();
+        const customerName = String(order.customerName || "").trim();
+        const customerEmail = String(order.customerEmail || "").trim();
+        const total = Number(order.total || 0);
+        const items = normalizeItems(order.items || []);
+        const address = String(order.address || "").trim();
+
+        if (!orderId || !customerEmail || items.length < 1 || !total) {
+          return res.status(400).json({ error: "Invalid order payload for email" });
+        }
+
+        await Promise.all([
+          sendOrderConfirmation({
+            orderId,
+            customerName,
+            customerEmail,
+            items,
+            total,
+            orderDate: order.createdAt || new Date(),
+          }),
+          sendAdminOrderNotification({
+            orderId,
+            customerName,
+            customerEmail,
+            items,
+            total,
+            address,
+          }),
+        ]);
+
+        return res.status(200).json({ success: true, emailSent: true });
+      }
+
+      if (_action === "sendStatusEmail") {
+        const order = req.body?.order || {};
+        const status = String(req.body?.status || order.status || "Updated").trim();
+        const orderId = String(order.id || "").trim();
+        const customerName = String(order.customerName || "").trim();
+        const customerEmail = String(order.customerEmail || "").trim();
+
+        if (!orderId || !customerEmail) {
+          return res.status(400).json({ error: "Invalid status email payload" });
+        }
+
+        await sendOrderStatusEmail({
+          orderId,
+          customerName,
+          customerEmail,
+          status,
+        });
+        return res.status(200).json({ success: true, emailSent: true });
+      }
+
       // Create order
       const { customerName, customerEmail, items, total, address } = req.body;
 

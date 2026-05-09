@@ -155,6 +155,9 @@ export default function CartDrawer() {
               paymentStatus: 'Success',
             })
 
+            // Best-effort email notification via backend Nodemailer endpoint.
+            await ordersService.sendOrderConfirmationEmail(orderRecord)
+
             clearCart()
             setIsOpen(false)
             setStep('cart')
