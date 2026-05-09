@@ -68,6 +68,68 @@ function buildOrderItemsTable(items) {
     .join("");
 }
 
+function formatHumanOrderStatus(status) {
+  const n = String(status || "").trim().toLowerCase();
+  switch (n) {
+    case "paid":
+      return "Paid";
+    case "pending":
+      return "Pending";
+    case "shipped":
+      return "Shipped";
+    case "cancelled_waiting_refund":
+      return "Cancelled (Waiting to be refunded)";
+    case "cancelled_refunded":
+      return "Cancelled and Refunded";
+    case "cancelled":
+      return "Cancelled (Waiting to be refunded)";
+    default:
+      return String(status || "Paid").trim() || "Paid";
+  }
+}
+
+function getCustomerStatusEmailHeadline(status) {
+  const n = String(status || "").trim().toLowerCase();
+  switch (n) {
+    case "paid":
+      return "Payment confirmed";
+    case "pending":
+      return "Your order is pending processing";
+    case "shipped":
+      return "Your order has been shipped!";
+    case "cancelled_waiting_refund":
+    case "cancelled":
+      return "Your order has been cancelled";
+    case "cancelled_refunded":
+      return "Your refund has been completed";
+    default:
+      return "Order status update";
+  }
+}
+
+function getCustomerStatusEmailSubject(status, orderId) {
+  const sid = String(orderId || "")
+    .trim()
+    .replace(/[\r\n]+/g, " ")
+    .slice(0, 90);
+  const n = String(status || "").trim().toLowerCase();
+  switch (n) {
+    case "shipped":
+      return `${sid}: Your order has been shipped`;
+    case "paid":
+      return `${sid}: Order & payment confirmed`;
+    case "pending":
+      return `${sid}: Order is pending`;
+    case "cancelled_waiting_refund":
+    case "cancelled":
+      return `${sid}: Order cancelled — refund pending`;
+    case "cancelled_refunded":
+      return `${sid}: Refund completed`;
+    default:
+      return `${sid}: Order status updated`;
+  }
+}
+
 function getStatusContent(status) {
   const normalized = String(status || "").trim().toLowerCase();
   switch (normalized) {
@@ -117,22 +179,24 @@ async function sendOrderConfirmation({
   orderDate,
   paymentId,
   address,
+  orderStatusLabel,
 }) {
   const itemsHTML = buildOrderItemsTable(items);
   const placedAt = normalizeDate(orderDate) || new Date();
   const supportPhone = getSupportPhone();
   const trackOrderUrl = getTrackOrderUrl(orderId);
+  const statusHuman = formatHumanOrderStatus(orderStatusLabel);
 
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: #10197E;">Order Confirmation</h2>
+      <h2 style="color: #10197E;">Thank you — your order is confirmed</h2>
       <p>Dear ${escapeHtml(customerName)},</p>
-      <p>Thank you for your order. We have received your purchase and will process it shortly.</p>
+      <p>Thank you for your order at Karthikeyan Analysis. We have received your purchase and will process it shortly.</p>
       <p><strong>Order ID:</strong> ${escapeHtml(orderId)}</p>
       <p><strong>Order Date:</strong> ${escapeHtml(
         placedAt.toLocaleString("en-IN"),
       )}</p>
-      <p><strong>Status:</strong> Pending</p>
+      <p><strong>Current status:</strong> ${escapeHtml(statusHuman)}</p>
       ${
         paymentId
           ? `<p><strong>Payment ID:</strong> ${escapeHtml(paymentId)}</p>`
@@ -175,7 +239,7 @@ async function sendOrderConfirmation({
 
   return safeSendMail({
     to: customerEmail,
-    subject: `Order Confirmation - ${orderId}`,
+    subject: `Order confirmed • ${orderId}`,
     html: htmlContent,
     replyTo: getAdminEmail(),
   });
@@ -237,13 +301,15 @@ async function sendOrderStatusEmail({
   orderDate,
 }) {
   const statusInfo = getStatusContent(status);
+  const headline = getCustomerStatusEmailHeadline(status);
+  const emailSubject = getCustomerStatusEmailSubject(status, orderId);
   const itemsHTML = buildOrderItemsTable(Array.isArray(items) ? items : []);
   const supportPhone = getSupportPhone();
   const trackOrderUrl = getTrackOrderUrl(orderId);
   const placedAt = normalizeDate(orderDate);
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: #10197E;">Order Status Update</h2>
+      <h2 style="color: #10197E;">${escapeHtml(headline)}</h2>
       <p>Dear ${escapeHtml(customerName || "Customer")},</p>
       <p>Your order <strong>${escapeHtml(orderId)}</strong> status is now:</p>
       <p style="font-size: 16px; font-weight: 700; color: #10197E;">${escapeHtml(
@@ -288,7 +354,7 @@ async function sendOrderStatusEmail({
 
   return safeSendMail({
     to: customerEmail,
-    subject: `Order ${orderId} • Status: ${statusInfo.label}`,
+    subject: emailSubject,
     html: htmlContent,
     replyTo: getAdminEmail(),
   });
@@ -348,6 +414,7 @@ export default async function handler(req, res) {
             orderDate: order.createdAt || new Date(),
             paymentId: order.razorpay_payment_id || "",
             address,
+            orderStatusLabel: order.status || "Paid",
           }),
           sendAdminOrderNotification({
             orderId,
@@ -437,6 +504,7 @@ export default async function handler(req, res) {
           orderDate: new Date(),
           paymentId: "",
           address: address || "",
+          orderStatusLabel: "pending",
         }),
         sendAdminOrderNotification({
           orderId,

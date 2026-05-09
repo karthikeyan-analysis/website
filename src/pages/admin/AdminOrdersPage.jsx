@@ -662,7 +662,7 @@ export default function AdminOrdersPage() {
                   <option value="cancelled_refunded">Cancelled and refunded</option>
                 </select>
                 <p className="text-xs text-gray-500">
-                  Customer gets an email for every status change.
+                  The customer receives an email whenever you change status (paid, pending, shipped, cancelled waiting refund, cancelled and refunded).
                 </p>
               </div>
 

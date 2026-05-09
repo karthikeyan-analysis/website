@@ -360,11 +360,98 @@ export const categoriesService = {
   },
 };
 
+/** Firestore Timestamps / Date objects often break JSON when posting to Vercel — normalize to ISO strings & plain objects. */
+function isoFromFirestoreMaybe(value) {
+  if (!value && value !== 0) return null;
+  if (typeof value?.toDate === "function") {
+    const d = value.toDate();
+    return Number.isNaN(d.getTime()) ? null : d.toISOString();
+  }
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value.toISOString();
+  }
+  if (typeof value?.seconds === "number") {
+    const d = new Date(value.seconds * 1000);
+    return Number.isNaN(d.getTime()) ? null : d.toISOString();
+  }
+  if (typeof value === "string") return value;
+  return null;
+}
+
+function buildAddressFallback(shipping) {
+  if (!shipping || typeof shipping !== "object") return "";
+  const cityState = [shipping.city, shipping.state].filter(Boolean).join(", ");
+  return [
+    shipping.addressLine1,
+    shipping.addressLine2,
+    shipping.area,
+    cityState,
+    shipping.pincode ? `Pincode: ${shipping.pincode}` : "",
+    shipping.landmark ? `Landmark: ${shipping.landmark}` : "",
+    shipping.altPhone ? `Alt phone: ${shipping.altPhone}` : "",
+  ]
+    .map((s) => String(s ?? "").trim())
+    .filter(Boolean)
+    .join(", ");
+}
+
+function serializeOrderPayloadForOrdersApi(order) {
+  const id = String(order?.id ?? "").trim();
+  const rawItems = Array.isArray(order?.items) ? order.items : [];
+  const items = rawItems.map((item) => ({
+    id: item?.id ?? "",
+    name: String(item?.name ?? "").trim(),
+    qty: Number(item?.qty ?? item?.quantity ?? 1) || 1,
+    price: Number(item?.price ?? 0),
+    image: String(item?.image ?? ""),
+  }));
+
+  let address = String(order?.address ?? "").trim();
+  if (!address && order?.shippingAddress) {
+    address = buildAddressFallback(order.shippingAddress);
+  }
+
+  const shippingAddr = order?.shippingAddress;
+  const shippingAddress =
+    shippingAddr && typeof shippingAddr === "object"
+      ? Object.fromEntries(
+          Object.entries(shippingAddr).map(([k, v]) => [
+            k,
+            v == null ? "" : String(v),
+          ]),
+        )
+      : undefined;
+
+  return {
+    id,
+    customerName: String(order?.customerName ?? "").trim(),
+    customerEmail: String(order?.customerEmail ?? "").trim(),
+    customerPhone: order?.customerPhone != null ? String(order.customerPhone) : "",
+    customerAltPhone:
+      order?.customerAltPhone != null ? String(order.customerAltPhone) : "",
+    items,
+    total: Number(order?.total ?? 0),
+    address,
+    shippingAddress,
+    razorpay_order_id:
+      order?.razorpay_order_id != null ? String(order.razorpay_order_id) : "",
+    razorpay_payment_id:
+      order?.razorpay_payment_id != null ? String(order.razorpay_payment_id) : "",
+    status: order?.status != null ? String(order.status) : "Paid",
+    paymentStatus:
+      order?.paymentStatus != null ? String(order.paymentStatus) : "",
+    createdAt: isoFromFirestoreMaybe(order?.createdAt) ?? order?.createdAt ?? null,
+    orderDate: isoFromFirestoreMaybe(order?.orderDate) ?? order?.orderDate ?? null,
+    updatedAt: isoFromFirestoreMaybe(order?.updatedAt) ?? order?.updatedAt ?? null,
+  };
+}
+
 // Orders Service (uses API)
 export const ordersService = {
   async sendOrderConfirmationEmail(order) {
     try {
-      return await ordersAPI.sendConfirmationEmail(order);
+      const payload = serializeOrderPayloadForOrdersApi(order || {});
+      return await ordersAPI.sendConfirmationEmail(payload);
     } catch (error) {
       console.error("Error sending order confirmation email:", error);
       return { success: false, emailSent: false, error: error.message };
@@ -373,7 +460,8 @@ export const ordersService = {
 
   async sendOrderStatusEmail(order, status) {
     try {
-      return await ordersAPI.sendStatusEmail(order, status);
+      const payload = serializeOrderPayloadForOrdersApi(order || {});
+      return await ordersAPI.sendStatusEmail(payload, status);
     } catch (error) {
       console.error("Error sending order status email:", error);
       return { success: false, emailSent: false, error: error.message };
@@ -432,7 +520,7 @@ export const ordersService = {
       const updatedOrder = snap.exists() ? { id: snap.id, ...snap.data() } : { id };
       const emailResult = await ordersService.sendOrderStatusEmail(
         updatedOrder,
-        statusData?.status,
+        String(statusData?.status ?? ""),
       );
       if (emailResult?.emailSent === false) {
         console.warn("Order status email not sent:", emailResult);
