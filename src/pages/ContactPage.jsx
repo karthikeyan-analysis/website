@@ -15,6 +15,7 @@ export default function ContactPage() {
   });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [successNote, setSuccessNote] = useState("");
   const [error, setError] = useState("");
 
   const handleChange = (e) => {
@@ -30,9 +31,10 @@ export default function ContactPage() {
     setLoading(true);
     setError("");
     setSuccess(false);
+    setSuccessNote("");
 
     try {
-      await contactsService.submitContact({
+      const result = await contactsService.submitContact({
         name: formData.name,
         phone: formData.phone,
         email: formData.email,
@@ -40,6 +42,10 @@ export default function ContactPage() {
       });
 
       setSuccess(true);
+      if (result?.warning) {
+        setSuccessNote(result.warning);
+      }
+
       setFormData({
         name: "",
         phone: "",
@@ -47,10 +53,15 @@ export default function ContactPage() {
         message: "",
       });
 
-      // Clear success message after 5 seconds
-      setTimeout(() => setSuccess(false), 5000);
+      setTimeout(() => {
+        setSuccess(false);
+        setSuccessNote("");
+      }, 9000);
     } catch (err) {
-      setError("Failed to send message. Please try again.");
+      setError(
+        err?.message?.trim() ||
+          "Failed to send message. Please try again or reach us by phone or email.",
+      );
       console.error(err);
     } finally {
       setLoading(false);
@@ -74,11 +85,16 @@ export default function ContactPage() {
               <Card color="blue">
                 <form onSubmit={handleSubmit} className="space-y-4">
                   {success && (
-                    <div className="rounded-lg bg-green-50 p-4 border border-green-200">
+                    <div className="rounded-lg bg-green-50 p-4 border border-green-200 space-y-2">
                       <p className="text-green-700 font-medium">
-                        Thank you! Your message has been sent successfully.
+                        Thank you! Your message has been saved successfully.
                         We'll get back to you soon.
                       </p>
+                      {successNote ? (
+                        <p className="text-sm text-amber-900/90 rounded-md bg-amber-50 border border-amber-200 px-3 py-2">
+                          {successNote}
+                        </p>
+                      ) : null}
                     </div>
                   )}
 

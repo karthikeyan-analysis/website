@@ -151,13 +151,87 @@ export const productsService = {
 };
 
 // Contacts Service (uses API)
+function normalizeContactSubject(contactData) {
+  const s =
+    typeof contactData?.subject === "string" ? contactData.subject.trim() : "";
+  return s.length ? s : "New contact form submission";
+}
+
 export const contactsService = {
   async submitContact(contactData) {
     try {
       return await contactsAPI.submit(contactData);
     } catch (error) {
-      console.error("Error submitting contact:", error);
-      throw error;
+      console.warn(
+        "Contact API failed; attempting Firestore client fallback:",
+        error?.message || error,
+      );
+
+      try {
+        const submission = {
+          name: String(contactData?.name ?? "").trim(),
+          email: String(contactData?.email ?? "").trim().toLowerCase(),
+          phone: String(contactData?.phone ?? "").trim(),
+          subject: normalizeContactSubject(contactData),
+          message: String(contactData?.message ?? "").trim(),
+          submittedAt: new Date().toISOString(),
+          read: false,
+          savedViaClientFallback: true,
+        };
+
+        const docRef = await addDoc(collection(db, "contacts"), submission);
+
+        return {
+          success: true,
+          submissionId: docRef.id,
+          clientFallback: true,
+          warning:
+            "Your message was saved. Email confirmation could not be sent from the server (check Vercel email settings). We'll still receive your inquiry in the admin panel.",
+        };
+      } catch (fallbackError) {
+        console.error(
+          "Error submitting contact (API + fallback):",
+          fallbackError,
+        );
+
+        const b = error?.apiBody || {};
+        const persistErr = b?.persistence?.error;
+        const userMail = b?.emailStatus?.user;
+        const adminMail = b?.emailStatus?.admin;
+
+        const parts = [error?.message].filter(Boolean);
+        if (persistErr) parts.push(`Database: ${persistErr}`);
+        if (userMail?.skipped)
+          parts.push(
+            userMail.reason
+              ? `User email skipped: ${userMail.reason}`
+              : "User email was not sent (SMTP may be unset)",
+          );
+        else if (!userMail?.ok && userMail?.reason)
+          parts.push(`User email: ${userMail.reason}`);
+        if (adminMail?.skipped)
+          parts.push(
+            adminMail.reason
+              ? `Admin email skipped: ${adminMail.reason}`
+              : "Admin email was not sent (SMTP may be unset)",
+          );
+        else if (!adminMail?.ok && adminMail?.reason)
+          parts.push(`Admin email: ${adminMail.reason}`);
+        if (fallbackError?.message)
+          parts.push(`Save failed: ${fallbackError.message}`);
+
+        const agg = parts.filter(Boolean).join(" ");
+        const detailed = new Error(
+          agg ||
+            "Could not submit your message. Please email us directly or call +91 63859 39895.",
+        );
+        detailed.apiBody = b;
+        detailed.fallbackError = fallbackError?.message || "";
+        if (Array.isArray(b?.fixChecklist)) {
+          console.error("Contact form — server fix checklist:", b.fixChecklist);
+        }
+        throw detailed;
+      }
     }
   },
 

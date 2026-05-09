@@ -3,7 +3,7 @@ node_modules
 .env*
 !.env.production
 dist
-server/
+# Do NOT ignore `server/` — Vercel serverless API routes import `server/firebaseAdmin.js` and `server/mailer.js`.
 README.md
 ARCHITECTURE.md
 DEPLOYMENT.md

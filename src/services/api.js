@@ -79,11 +79,37 @@ export const categoriesAPI = {
 
 // Contacts API
 export const contactsAPI = {
+  /** Uses dedicated fetch so error responses include `{ persistence, emailStatus }` on the thrown error. */
   async submit(data) {
-    return apiCall("/contacts/submit", {
-      method: "POST",
-      body: JSON.stringify(data),
-    });
+    const url = `${API_BASE_URL}/contacts/submit`;
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      const contentType = response.headers.get("content-type") || "";
+      const isJson = contentType.includes("application/json");
+      const body = isJson
+        ? await response.json()
+        : { _nonJson: true, text: await response.text() };
+
+      if (!response.ok) {
+        const err = new Error(
+          typeof body?.error === "string"
+            ? body.error
+            : `API error: ${response.status}`,
+        );
+        err.status = response.status;
+        err.apiBody = body;
+        throw err;
+      }
+      return body;
+    } catch (error) {
+      if (error?.apiBody) throw error;
+      console.error(`API Error (/contacts/submit):`, error);
+      throw error;
+    }
   },
 
   async getAll() {

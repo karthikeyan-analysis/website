@@ -1,12 +1,12 @@
-async function sendContactConfirmation({
-  deps,
-  name,
-  email,
-  phone,
-  subject,
-  message,
-}) {
-  const { escapeHtml, formatMultiline, getAdminEmail, safeSendMail } = deps;
+import {
+  escapeHtml,
+  formatMultiline,
+  getAdminEmail,
+  safeSendMail,
+} from "../../server/mailer.js";
+import { getAdminDb } from "../../server/firebaseAdmin.js";
+
+async function sendContactConfirmation({ name, email, subject, message }) {
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h2 style="color: #10197E;">Contact Form Received</h2>
@@ -22,7 +22,7 @@ async function sendContactConfirmation({
     </div>
   `;
 
-  return await safeSendMail({
+  return safeSendMail({
     to: email,
     subject: `Re: ${subject} - Contact Confirmation`,
     html: htmlContent,
@@ -31,7 +31,6 @@ async function sendContactConfirmation({
 }
 
 async function sendAdminNotification({
-  deps,
   name,
   email,
   phone,
@@ -39,7 +38,6 @@ async function sendAdminNotification({
   message,
   submissionId,
 }) {
-  const { escapeHtml, formatMultiline, getAdminEmail, safeSendMail } = deps;
   const adminHtmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h2 style="color: #10197E;">New Contact Form Submission</h2>
@@ -55,7 +53,7 @@ async function sendAdminNotification({
     </div>
   `;
 
-  return await safeSendMail({
+  return safeSendMail({
     to: getAdminEmail(),
     subject: `New Contact: ${subject}`,
     html: adminHtmlContent,
@@ -63,13 +61,11 @@ async function sendAdminNotification({
   });
 }
 
-function contactsCollection(getAdminDb) {
-  const db = getAdminDb();
-  return db.collection("contacts");
+function contactsCollection() {
+  return getAdminDb().collection("contacts");
 }
 
 export default async function handler(req, res) {
-  // Enable CORS
   res.setHeader("Access-Control-Allow-Credentials", "true");
   res.setHeader("Access-Control-Allow-Origin", process.env.FRONTEND_URL || "*");
   res.setHeader(
@@ -97,39 +93,15 @@ export default async function handler(req, res) {
         ? subject.trim()
         : "New contact form submission";
 
-    // Validation
     if (!name || !email || !phone || !message) {
       return res.status(400).json({ error: "All fields are required" });
     }
 
-    // Dynamic imports prevent module-load crashes from becoming FUNCTION_INVOCATION_FAILED.
-    let deps = null;
-    let getAdminDb = null;
-    try {
-      const mailer = await import("../../server/mailer.js");
-      deps = {
-        escapeHtml: mailer.escapeHtml,
-        formatMultiline: mailer.formatMultiline,
-        getAdminEmail: mailer.getAdminEmail,
-        safeSendMail: mailer.safeSendMail,
-      };
-    } catch (e) {
-      console.error("Failed to load mailer module:", e);
-    }
-
-    try {
-      const admin = await import("../../server/firebaseAdmin.js");
-      getAdminDb = admin.getAdminDb;
-    } catch (e) {
-      console.error("Failed to load firebase admin module:", e);
-    }
-
     let submissionId = `contact_${Date.now()}`;
     let persistence = { ok: true, source: "firestore" };
-    if (typeof getAdminDb === "function") {
-      try {
-      // Persist to Firestore (primary source of truth)
-        const docRef = await contactsCollection(getAdminDb).add({
+
+    try {
+      const docRef = await contactsCollection().add({
         name,
         email,
         phone,
@@ -138,56 +110,37 @@ export default async function handler(req, res) {
         submittedAt: new Date().toISOString(),
         read: false,
         ipAddress:
-          (req.headers["x-forwarded-for"] || "")
-            .toString()
-            .split(",")[0]
-            .trim() ||
+          (req.headers["x-forwarded-for"] || "").toString().split(",")[0].trim() ||
           req.socket?.remoteAddress ||
           "",
         userAgent: req.headers["user-agent"] || "",
       });
       submissionId = docRef.id;
-      } catch (persistError) {
-        persistence = {
-          ok: false,
-          source: "mail_only",
-          error: persistError?.message || "FIRESTORE_SAVE_FAILED",
-        };
-        console.error("Contact save failed:", persistError);
-      }
-    } else {
+    } catch (persistError) {
       persistence = {
         ok: false,
         source: "mail_only",
-        error: "FIREBASE_ADMIN_MODULE_NOT_AVAILABLE",
+        error: persistError?.message || "FIRESTORE_SAVE_FAILED",
       };
+      console.error("Contact save failed:", persistError);
     }
 
-    // Send emails. Use allSettled so one failure doesn't mask the other.
-    const [userMailRes, adminMailRes] = deps
-      ? await Promise.allSettled([
-          sendContactConfirmation({
-            deps,
-            name,
-            email,
-            phone,
-            subject: normalizedSubject,
-            message,
-          }),
-          sendAdminNotification({
-            deps,
-            name,
-            email,
-            phone,
-            subject: normalizedSubject,
-            message,
-            submissionId,
-          }),
-        ])
-      : [
-          { status: "rejected", reason: new Error("MAILER_MODULE_NOT_AVAILABLE") },
-          { status: "rejected", reason: new Error("MAILER_MODULE_NOT_AVAILABLE") },
-        ];
+    const [userMailRes, adminMailRes] = await Promise.allSettled([
+      sendContactConfirmation({
+        name,
+        email,
+        subject: normalizedSubject,
+        message,
+      }),
+      sendAdminNotification({
+        name,
+        email,
+        phone,
+        subject: normalizedSubject,
+        message,
+        submissionId,
+      }),
+    ]);
 
     const toEmailResult = (result) =>
       result.status === "fulfilled"
@@ -209,6 +162,7 @@ export default async function handler(req, res) {
     };
 
     const anyMailWorked = emailStatus.user.ok || emailStatus.admin.ok;
+
     if (!persistence.ok && !anyMailWorked) {
       return res.status(500).json({
         error:
@@ -216,6 +170,13 @@ export default async function handler(req, res) {
         submissionId,
         persistence,
         emailStatus,
+        fixChecklist: [
+          "Vercel → Project → Settings → Environment Variables (Production): FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY or FIREBASE_PRIVATE_KEY_BASE64.",
+          "Same place: EMAIL_USER (or SMTP_USER), EMAIL_PASSWORD, EMAIL_FROM, ADMIN_EMAIL.",
+          "Ensure `.vercelignore` does NOT exclude the `server/` folder (it contains firebaseAdmin + mailer used by all API routes).",
+          "Redeploy after changing env vars.",
+          "If emails still fail with Gmail: enable 2FA and use an App Password.",
+        ],
       });
     }
 
