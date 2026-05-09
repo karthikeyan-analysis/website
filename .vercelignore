@@ -1,0 +1,16 @@
+node_modules
+.git
+.env*
+!.env.production
+dist
+server/
+README.md
+ARCHITECTURE.md
+DEPLOYMENT.md
+IMPLEMENTATION_GUIDE.md
+QUICKSTART.md
+SETUP_COMPLETE.md
+ENV_SETUP.md
+.eslintignore
+.gitignore
+*.md

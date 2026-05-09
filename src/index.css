@@ -1,0 +1,73 @@
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap");
+
+/* Book Antiqua Bold — kept only for .font-display (header title) */
+@font-face {
+  font-family: "Book Antiqua Bold";
+  src: url("/fonts/bookantiqua_bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    font-family: "Montserrat", ui-sans-serif, system-ui, sans-serif;
+  }
+
+  body {
+    @apply m-0 bg-slate-50 text-brand-black/80 antialiased;
+    font-family: "Montserrat", ui-sans-serif, system-ui, sans-serif;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  ::selection {
+    @apply bg-brand-navy/15 text-brand-navy;
+  }
+
+  #root {
+    @apply min-h-[100dvh];
+  }
+
+  * {
+    @apply box-border;
+  }
+}
+
+@layer utilities {
+  .font-numbers {
+    font-family: "Plus Jakarta Sans", "Inter", sans-serif;
+  }
+
+  .noise {
+    background-color: transparent;
+  }
+
+  /*
+   * Offer ticker marquee.
+   * Track is position:absolute, so it never affects layout width.
+   * translateY(-50%) keeps it vertically centred inside the clip box.
+   * translateX goes 0 → -50% (= one full copy of the doubled text).
+   */
+  @keyframes offer-marquee {
+    0%   { transform: translateX(0)     translateY(-50%); }
+    100% { transform: translateX(-50%)  translateY(-50%); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    @keyframes offer-marquee {
+      0%, 100% { transform: translateX(0) translateY(-50%); }
+    }
+  }
+
+  /* Hide floating social buttons when the mobile drawer is open */
+  body.drawer-open .floating-buttons {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+}
