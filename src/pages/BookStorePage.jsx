@@ -134,6 +134,21 @@ export default function BookStorePage() {
                     key={product.id}
                     className="group relative overflow-hidden rounded-2xl border border-black/10 bg-white/90 p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-soft"
                   >
+                    <div className="mb-4 overflow-hidden rounded-xl border border-black/10 bg-black/[0.02]">
+                      {product.image ? (
+                        <img
+                          src={product.image}
+                          alt={product.name}
+                          className="h-44 w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="grid h-44 w-full place-items-center text-sm text-brand-black/45">
+                          No image
+                        </div>
+                      )}
+                    </div>
+
                     <p className="text-xs uppercase tracking-wide text-brand-purple">
                       {product.category}
                     </p>
@@ -144,16 +159,34 @@ export default function BookStorePage() {
                       {product.description}
                     </p>
                     <div className="mt-4">
-                      <div className="flex items-end gap-2">
-                        <p className="text-2xl font-bold text-brand-navy">
-                          Rs. {parseFloat(product.price).toFixed(2)}
-                        </p>
-                        {product.mrpPrice && Number(product.mrpPrice) > Number(product.price) ? (
-                          <p className="text-sm text-brand-black/45 line-through">
-                            Rs. {parseFloat(product.mrpPrice).toFixed(2)}
-                          </p>
-                        ) : null}
-                      </div>
+                      {(() => {
+                        const selling = Number(product.price) || 0;
+                        const mrp = Number(product.mrpPrice) || 0;
+                        const hasDiscount = mrp > selling && selling > 0;
+                        const discountPct = hasDiscount
+                          ? Math.round(((mrp - selling) / mrp) * 100)
+                          : 0;
+
+                        return (
+                          <div className="space-y-1">
+                            <div className="flex items-end gap-2">
+                              <p className="text-2xl font-bold text-brand-navy">
+                                Rs. {selling.toFixed(2)}
+                              </p>
+                              {hasDiscount ? (
+                                <p className="text-sm text-brand-black/45 line-through">
+                                  Rs. {mrp.toFixed(2)}
+                                </p>
+                              ) : null}
+                            </div>
+                            {hasDiscount ? (
+                              <p className="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">
+                                {discountPct}% OFF
+                              </p>
+                            ) : null}
+                          </div>
+                        );
+                      })()}
                       <p className="text-xs text-gray-500 mt-1">
                         Stock: {product.stock}
                       </p>
