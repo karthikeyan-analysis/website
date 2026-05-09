@@ -44,6 +44,7 @@ export default async function handler(req, res) {
         category,
         description,
         image,
+        images,
         stock,
       } = req.body || {};
 
@@ -82,6 +83,10 @@ export default async function handler(req, res) {
       }
 
       const now = new Date();
+      const normalizedImages = Array.isArray(images)
+        ? images.map((url) => String(url || "").trim()).filter(Boolean)
+        : [];
+      const primaryImage = normalizedImages[0] || (image ? String(image).trim() : "");
       const data = {
         name: String(name).trim(),
         mrpPrice: mrpRaw,
@@ -89,7 +94,8 @@ export default async function handler(req, res) {
         categoryId: String(categoryId),
         category: category ? String(category).trim() : "",
         description: String(description).trim(),
-        image: image ? String(image).trim() : "",
+        image: primaryImage,
+        images: primaryImage ? [primaryImage, ...normalizedImages.filter((url) => url !== primaryImage)] : normalizedImages,
         stock: Math.trunc(s),
         createdAt: now,
         updatedAt: now,

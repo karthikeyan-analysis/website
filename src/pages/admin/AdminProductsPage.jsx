@@ -26,8 +26,8 @@ export default function AdminProductsPage() {
     image: "",
     stock: "",
   });
-  const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState("");
+  const [imageFiles, setImageFiles] = useState([]);
+  const [imagePreviews, setImagePreviews] = useState([]);
   const [errors, setErrors] = useState({});
 
   // Load products and categories
@@ -35,12 +35,30 @@ export default function AdminProductsPage() {
     loadData();
   }, []);
 
+  const clearImagePreviews = () => {
+    imagePreviews.forEach((url) => {
+      if (typeof url === "string" && url.startsWith("blob:")) {
+        URL.revokeObjectURL(url);
+      }
+    });
+  };
+
+  const normalizeProductImages = (product) => {
+    const list = [];
+    if (Array.isArray(product?.images)) {
+      list.push(...product.images);
+    }
+    if (product?.image) {
+      list.push(product.image);
+    }
+    return Array.from(new Set(list.map((url) => String(url || "").trim()).filter(Boolean)));
+  };
+
   useEffect(() => {
-    if (!imageFile) return;
-    const next = URL.createObjectURL(imageFile);
-    setImagePreview(next);
-    return () => URL.revokeObjectURL(next);
-  }, [imageFile]);
+    return () => {
+      clearImagePreviews();
+    };
+  }, [imagePreviews]);
 
   const loadData = async () => {
     try {
@@ -98,13 +116,18 @@ export default function AdminProductsPage() {
         (c) => c.id === formData.categoryId,
       );
 
-      const existingImage = editingId
-        ? products.find((p) => p.id === editingId)?.image || ""
-        : "";
+      const existingImages = editingId
+        ? normalizeProductImages(products.find((p) => p.id === editingId))
+        : [];
 
-      const uploadedImageUrl = imageFile
-        ? await productsService.uploadProductImage(imageFile)
-        : "";
+      const uploadedImageUrls = imageFiles.length
+        ? await Promise.all(
+            imageFiles.map((file) => productsService.uploadProductImage(file)),
+          )
+        : [];
+      const finalImages = (uploadedImageUrls.length ? uploadedImageUrls : existingImages)
+        .map((url) => String(url || "").trim())
+        .filter(Boolean);
 
       const productData = {
         name: formData.name.trim(),
@@ -115,7 +138,8 @@ export default function AdminProductsPage() {
         categoryId: formData.categoryId,
         category: selectedCategory?.name || formData.category,
         description: formData.description.trim(),
-        image: (uploadedImageUrl || existingImage).trim() || "",
+        image: finalImages[0] || "",
+        images: finalImages,
         stock: parseInt(formData.stock),
       };
 
@@ -155,8 +179,9 @@ export default function AdminProductsPage() {
       image: product.image || "",
       stock: product.stock,
     });
-    setImageFile(null);
-    setImagePreview(product.image || "");
+    clearImagePreviews();
+    setImageFiles([]);
+    setImagePreviews(normalizeProductImages(product));
     setEditingId(product.id);
     setShowForm(true);
     setErrors({});
@@ -194,8 +219,9 @@ export default function AdminProductsPage() {
       image: "",
       stock: "",
     });
-    setImageFile(null);
-    setImagePreview("");
+    clearImagePreviews();
+    setImageFiles([]);
+    setImagePreviews([]);
     setEditingId(null);
     setShowForm(false);
     setErrors({});
@@ -395,39 +421,48 @@ export default function AdminProductsPage() {
 
               <div>
                 <label className="block text-sm font-medium text-brand-black/80">
-                  Product Image
+                  Product Images
                 </label>
                 <div className="mt-1 grid gap-3 md:grid-cols-2">
                   <div>
                     <input
                       type="file"
                       accept="image/*"
+                      multiple
                       onChange={(e) => {
-                        const file = e.target.files?.[0] || null;
-                        setImageFile(file);
+                        const files = Array.from(e.target.files || []);
+                        clearImagePreviews();
+                        setImageFiles(files);
+                        setImagePreviews(files.map((file) => URL.createObjectURL(file)));
                       }}
                       className="block w-full rounded-lg border border-black/10 bg-white px-4 py-2 transition focus:border-brand-navy focus:outline-none"
                     />
                     <p className="mt-1 text-xs text-brand-black/50">
-                      Upload an image for this product.
+                      Upload one or more images for this product.
                     </p>
                   </div>
 
                   <div className="flex items-start gap-3">
-                    {imagePreview ? (
-                      <img
-                        src={imagePreview}
-                        alt="Product preview"
-                        className="h-20 w-20 rounded-lg object-cover border border-black/10"
-                      />
+                    {imagePreviews.length ? (
+                      <div className="grid grid-cols-3 gap-2">
+                        {imagePreviews.map((preview, index) => (
+                          <img
+                            key={`${preview}-${index}`}
+                            src={preview}
+                            alt={`Product preview ${index + 1}`}
+                            className="h-20 w-20 rounded-lg border border-black/10 object-cover"
+                          />
+                        ))}
+                      </div>
                     ) : (
                       <div className="h-20 w-20 rounded-lg border border-dashed border-black/20 bg-black/2" />
                     )}
                     <button
                       type="button"
                       onClick={() => {
-                        setImageFile(null);
-                        setImagePreview("");
+                        clearImagePreviews();
+                        setImageFiles([]);
+                        setImagePreviews([]);
                         setFormData((prev) => ({ ...prev, image: "" }));
                       }}
                       className="rounded-lg border border-black/10 px-3 py-2 text-sm transition hover:bg-black/5"

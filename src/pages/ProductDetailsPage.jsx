@@ -37,6 +37,7 @@ export default function ProductDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [savingReview, setSavingReview] = useState(false);
   const [error, setError] = useState("");
+  const [activeImage, setActiveImage] = useState("");
   const [reviewForm, setReviewForm] = useState({
     name: "",
     email: "",
@@ -71,6 +72,21 @@ export default function ProductDetailsPage() {
     const total = reviews.reduce((sum, r) => sum + Number(r.rating || 0), 0);
     return { avg: total / reviews.length, count: reviews.length };
   }, [reviews]);
+
+  const productImages = useMemo(() => {
+    const list = [];
+    if (Array.isArray(product?.images)) {
+      list.push(...product.images);
+    }
+    if (product?.image) {
+      list.push(product.image);
+    }
+    return Array.from(new Set(list.map((url) => String(url || "").trim()).filter(Boolean)));
+  }, [product]);
+
+  useEffect(() => {
+    setActiveImage(productImages[0] || "");
+  }, [productImages]);
 
   const submitReview = async (e) => {
     e.preventDefault();
@@ -140,9 +156,9 @@ export default function ProductDetailsPage() {
                 <div className="lg:sticky lg:top-28">
                   <Card className="p-4 sm:p-6">
                     <div className="overflow-hidden rounded-2xl border border-black/10 bg-black/[0.02]">
-                      {product.image ? (
+                      {activeImage ? (
                         <img
-                          src={product.image}
+                          src={activeImage}
                           alt={product.name}
                           className="h-full min-h-[240px] w-full object-cover sm:min-h-[320px] lg:min-h-[360px]"
                         />
@@ -152,6 +168,29 @@ export default function ProductDetailsPage() {
                         </div>
                       )}
                     </div>
+
+                    {productImages.length > 1 ? (
+                      <div className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-5">
+                        {productImages.map((imageUrl, index) => (
+                          <button
+                            key={`${imageUrl}-${index}`}
+                            type="button"
+                            onClick={() => setActiveImage(imageUrl)}
+                            className={`overflow-hidden rounded-lg border transition ${
+                              imageUrl === activeImage
+                                ? "border-brand-navy ring-2 ring-brand-navy/20"
+                                : "border-black/10 hover:border-brand-navy/40"
+                            }`}
+                          >
+                            <img
+                              src={imageUrl}
+                              alt={`${product.name} preview ${index + 1}`}
+                              className="h-16 w-full object-cover"
+                            />
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
 
                     <div className="mt-5 rounded-2xl bg-black/[0.02] p-4 ring-1 ring-black/5">
                       <div className="flex flex-wrap items-end justify-between gap-3">
