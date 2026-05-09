@@ -58,6 +58,33 @@ export const productsService = {
     }
   },
 
+  async getProductById(productId) {
+    try {
+      return await productsAPI.getById(productId);
+    } catch (error) {
+      console.error("Error fetching product:", error);
+      throw error;
+    }
+  },
+
+  async getProductReviews(productId) {
+    try {
+      return await productsAPI.getReviews(productId);
+    } catch (error) {
+      console.error("Error fetching product reviews:", error);
+      throw error;
+    }
+  },
+
+  async addProductReview(payload) {
+    try {
+      return await productsAPI.addReview(payload);
+    } catch (error) {
+      console.error("Error adding product review:", error);
+      throw error;
+    }
+  },
+
   async updateProduct(productId, productData) {
     try {
       return await productsAPI.update(productId, productData);

@@ -6,12 +6,10 @@ import {
   Truck,
 } from "lucide-react";
 import { useMemo, useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import PageLayout from "../components/layout/PageLayout";
-import { useCart } from "../hooks/useCart";
-import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
 import Container from "../components/ui/Container";
-import SectionHeader from "../components/ui/SectionHeader";
 import { productsService } from "../services/firebaseService";
 
 const trustItems = [
@@ -37,7 +35,7 @@ export default function BookStorePage() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [productCategories, setProductCategories] = useState([]);
-  const { addToCart } = useCart();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const loadProducts = async () => {
@@ -132,7 +130,16 @@ export default function BookStorePage() {
                 {filteredProducts.map((product) => (
                   <article
                     key={product.id}
-                    className="group relative overflow-hidden rounded-2xl border border-black/10 bg-white/90 p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-soft"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => navigate(`/book-store/${product.id}`)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        navigate(`/book-store/${product.id}`);
+                      }
+                    }}
+                    className="group relative cursor-pointer overflow-hidden rounded-2xl border border-black/10 bg-white/90 p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-soft"
                   >
                     <div className="mb-4 overflow-hidden rounded-xl border border-black/10 bg-black/[0.02]">
                       {product.image ? (
@@ -187,19 +194,9 @@ export default function BookStorePage() {
                           </div>
                         );
                       })()}
-                      <p className="text-xs text-gray-500 mt-1">
-                        Stock: {product.stock}
-                      </p>
                     </div>
-                    <Button
-                      disabled={product.stock <= 0}
-                      onClick={() => product.stock > 0 && addToCart(product)}
-                      className="mt-5 w-full"
-                    >
-                      {product.stock > 0 ? "Quick Add" : "Out of stock"}
-                    </Button>
-                    <p className="mt-3 flex items-center gap-1 text-xs text-brand-sky">
-                      <ShieldCheck className="h-4 w-4" /> SSL Secured
+                    <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-brand-navy/70">
+                      Tap to view details
                     </p>
                   </article>
                 ))}

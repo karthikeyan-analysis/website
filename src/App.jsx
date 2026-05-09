@@ -35,6 +35,7 @@ const BatchesPage = lazy(() => import("./pages/BatchesPage"));
 const AchievementsPage = lazy(() => import("./pages/AchievementsPage"));
 const ContactPage = lazy(() => import("./pages/ContactPage"));
 const BookStorePage = lazy(() => import("./pages/BookStorePage"));
+const ProductDetailsPage = lazy(() => import("./pages/ProductDetailsPage"));
 
 // Policy Pages
 const PrivacyPolicyPage = lazy(() => import("./pages/PrivacyPolicyPage"));
@@ -104,6 +105,7 @@ function App() {
               <Route path="/achievements" element={<AchievementsPage />} />
               <Route path="/contact" element={<ContactPage />} />
               <Route path="/book-store" element={<BookStorePage />} />
+              <Route path="/book-store/:id" element={<ProductDetailsPage />} />
 
               {/* Policy Routes */}
               <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
