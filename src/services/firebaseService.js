@@ -19,7 +19,7 @@ import {
   deleteObject,
 } from "firebase/storage";
 import { db, storage } from "../config/firebase";
-import { contactsAPI, paymentsAPI } from "./api";
+import { contactsAPI, ordersAPI, paymentsAPI } from "./api";
 
 // Products Service
 export const productsService = {

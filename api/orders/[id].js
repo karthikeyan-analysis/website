@@ -1,4 +1,9 @@
-import { escapeHtml, getAdminEmail, safeSendMail } from "../../server/mailer.js";
+import {
+  escapeHtml,
+  formatMultiline,
+  getAdminEmail,
+  safeSendMail,
+} from "../../server/mailer.js";
 import { getAdminDb } from "../../server/firebaseAdmin.js";
 
 function normalizeItems(rawItems) {
@@ -30,6 +35,35 @@ function getTrackOrderUrl(orderId) {
   const safeBase = String(base).replace(/\/+$/, "");
   const id = encodeURIComponent(String(orderId || "").trim());
   return `${safeBase}/track-order/${id}`;
+}
+
+function normalizeDate(value) {
+  const date = (() => {
+    if (!value) return null;
+    if (value instanceof Date) return value;
+    if (typeof value === "string") return new Date(value);
+    if (typeof value?.toDate === "function") return value.toDate();
+    if (value?._seconds) return new Date(value._seconds * 1000);
+    if (value?.seconds) return new Date(value.seconds * 1000);
+    return null;
+  })();
+  return date && !Number.isNaN(date.getTime()) ? date : null;
+}
+
+function buildOrderItemsRowsHtml(items) {
+  return normalizeItems(items)
+    .map((item) => {
+      const qty = Number(item.quantity || 0);
+      const price = Number(item.price || 0);
+      const subtotal = qty * price;
+      return `<tr>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;">${escapeHtml(item.name)}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: center;">${escapeHtml(qty)}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">₹${escapeHtml(formatCurrency(price))}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">₹${escapeHtml(formatCurrency(subtotal))}</td>
+      </tr>`;
+    })
+    .join("");
 }
 
 function getStatusContent(status, orderId) {
@@ -81,59 +115,90 @@ function getStatusContent(status, orderId) {
 
 async function sendOrderStatusEmail(
   status,
-  { orderId, customerName, customerEmail, items, total, paymentId, address },
+  {
+    orderId,
+    customerName,
+    customerEmail,
+    items,
+    total,
+    paymentId,
+    address,
+    orderDate,
+  },
 ) {
   const config = getStatusContent(status, orderId);
   const supportPhone = getSupportPhone();
+  const telHref = escapeHtml(supportPhone.replace(/\s+/g, ""));
   const trackOrderUrl = getTrackOrderUrl(orderId);
-  const itemsRows = normalizeItems(items)
-    .map((item) => {
-      const qty = Number(item.quantity || 0);
-      const price = Number(item.price || 0);
-      const subtotal = qty * price;
-      return `<tr>
-        <td style="padding: 8px; border-bottom: 1px solid #ddd;">${escapeHtml(item.name)}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: center;">${escapeHtml(qty)}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">₹${escapeHtml(formatCurrency(price))}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">₹${escapeHtml(formatCurrency(subtotal))}</td>
+  const placedAt = normalizeDate(orderDate);
+  const normalized = normalizeItems(items || []);
+  const itemsBodyHTML =
+    normalized.length > 0
+      ? buildOrderItemsRowsHtml(items || [])
+      : `<tr>
+        <td colspan="4" style="padding:10px;border-bottom:1px solid #ddd;color:#555;">
+          Line-item details were not attached to this message. Your order total and Order ID below are still valid.
+        </td>
       </tr>`;
-    })
-    .join("");
 
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: #10197E;">Order Status Update</h2>
-      <p>Dear ${escapeHtml(customerName)},</p>
+      <h2 style="color: #10197E;">${escapeHtml(config.label)} — update</h2>
+      <p>Dear ${escapeHtml(customerName || "Customer")},</p>
       <p>${escapeHtml(config.message)}</p>
-      <p><strong>Order ID:</strong> ${escapeHtml(orderId)}</p>
-      <p><strong>Status:</strong> ${escapeHtml(config.label)}</p>
-      <p><strong>Total:</strong> ₹${escapeHtml(formatCurrency(total))}</p>
+
+      <div style="margin:18px 0;padding:14px 16px;background:#f5f7ff;border:1px solid #cfd6f6;border-radius:6px;">
+        <p style="margin:0 0 6px 0;font-size:13px;color:#334;text-transform:uppercase;letter-spacing:0.04em;">Your order ID</p>
+        <p style="margin:0;font-size:18px;font-weight:700;color:#10197E;word-break:break-all;">${escapeHtml(orderId)}</p>
+        <p style="margin:12px 0 0 0;font-size:14px;color:#333;">
+          Always use this Order ID when you contact us or when you check your order status on our website.
+        </p>
+      </div>
+
+      <p><strong>Current status:</strong> ${escapeHtml(config.label)}</p>
+
+      <hr style="border: none; border-top: 1px solid #ddd; margin: 22px 0;">
+      <h3 style="margin:0 0 12px 0;color:#10197E;">Complete order details</h3>
+      ${placedAt ? `<p><strong>Order date:</strong> ${escapeHtml(placedAt.toLocaleString("en-IN"))}</p>` : ""}
       ${paymentId ? `<p><strong>Payment ID:</strong> ${escapeHtml(paymentId)}</p>` : ""}
-      ${address ? `<p><strong>Delivery Address:</strong> ${escapeHtml(address)}</p>` : ""}
-      ${
-        itemsRows
-          ? `<table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+      ${address ? `<p><strong>Delivery address:</strong><br>${formatMultiline(address)}</p>` : ""}
+      ${customerEmail ? `<p><strong>Email on order:</strong> ${escapeHtml(customerEmail)}</p>` : ""}
+
+      <table style="width: 100%; border-collapse: collapse; margin-top: 14px;">
         <thead>
-          <tr style="background: #f5f5f5;">
+          <tr style="background-color: #f5f5f5;">
             <th style="padding: 8px; text-align: left; border-bottom: 2px solid #ddd;">Item</th>
             <th style="padding: 8px; text-align: center; border-bottom: 2px solid #ddd;">Qty</th>
             <th style="padding: 8px; text-align: right; border-bottom: 2px solid #ddd;">Price</th>
             <th style="padding: 8px; text-align: right; border-bottom: 2px solid #ddd;">Subtotal</th>
           </tr>
         </thead>
-        <tbody>${itemsRows}</tbody>
-      </table>`
-          : ""
-      }
-      <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-      <p><strong>Track your order:</strong> Use this order ID on our website.</p>
-      <p>
-        Track link:
-        <a href="${escapeHtml(trackOrderUrl)}">${escapeHtml(trackOrderUrl)}</a>
-      </p>
-      <p>If you have any queries, call us at <a href="tel:${escapeHtml(
-        supportPhone.replace(/\s+/g, ""),
-      )}">${escapeHtml(supportPhone)}</a>.</p>
+        <tbody>${itemsBodyHTML}</tbody>
+        <tfoot>
+          <tr>
+            <td colspan="3" style="padding: 8px; text-align: right; border-top: 2px solid #ddd;"><strong>Order total</strong></td>
+            <td style="padding: 8px; text-align: right; border-top: 2px solid #ddd;"><strong>₹${escapeHtml(
+              formatCurrency(total),
+            )}</strong></td>
+          </tr>
+        </tfoot>
+      </table>
+
+      <div style="margin:24px 0;padding:16px 18px;background:#fafbff;border-left:4px solid #10197E;border-radius:4px;">
+        <p style="margin:0 0 10px 0;"><strong>For any queries,</strong> contact us at our number:
+          <a href="tel:${telHref}" style="color:#10197E;font-weight:700;">${escapeHtml(supportPhone)}</a>.
+        </p>
+        <p style="margin:0 0 10px 0;">
+          <strong>Check your order status</strong> on our website anytime using your Order ID
+          (<strong>${escapeHtml(orderId)}</strong>). Open the Track order page and enter this ID when asked.
+        </p>
+        <p style="margin:0;font-size:14px;">
+          Direct link:
+          <a href="${escapeHtml(trackOrderUrl)}" style="color:#10197E;">${escapeHtml(trackOrderUrl)}</a>
+        </p>
+      </div>
+
+      <p>Thank you for shopping with us.</p>
       <p>Best regards,<br>Karthikeyan Analysis Team</p>
     </div>
   `;
@@ -215,6 +280,7 @@ export default async function handler(req, res) {
           total: prev.total || 0,
           paymentId: prev.razorpay_payment_id || "",
           address: prev.address || "",
+          orderDate: prev.createdAt ?? prev.orderDate ?? null,
         });
       }
 

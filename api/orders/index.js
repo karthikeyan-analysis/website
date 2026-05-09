@@ -303,28 +303,46 @@ async function sendOrderStatusEmail({
   const statusInfo = getStatusContent(status);
   const headline = getCustomerStatusEmailHeadline(status);
   const emailSubject = getCustomerStatusEmailSubject(status, orderId);
-  const itemsHTML = buildOrderItemsTable(Array.isArray(items) ? items : []);
+  const lineItems = Array.isArray(items) ? items : [];
+  const itemsBodyHTML =
+    lineItems.length > 0
+      ? buildOrderItemsTable(lineItems)
+      : `<tr>
+        <td colspan="4" style="padding:10px;border-bottom:1px solid #ddd;color:#555;">
+          Line-item details were not attached to this message. Your order total and Order ID below are still valid.
+        </td>
+      </tr>`;
   const supportPhone = getSupportPhone();
+  const telHref = escapeHtml(supportPhone.replace(/\s+/g, ""));
   const trackOrderUrl = getTrackOrderUrl(orderId);
   const placedAt = normalizeDate(orderDate);
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h2 style="color: #10197E;">${escapeHtml(headline)}</h2>
       <p>Dear ${escapeHtml(customerName || "Customer")},</p>
+
+      <div style="margin:18px 0;padding:14px 16px;background:#f5f7ff;border:1px solid #cfd6f6;border-radius:6px;">
+        <p style="margin:0 0 6px 0;font-size:13px;color:#334;text-transform:uppercase;letter-spacing:0.04em;">Your order ID</p>
+        <p style="margin:0;font-size:18px;font-weight:700;color:#10197E;word-break:break-all;">${escapeHtml(orderId)}</p>
+        <p style="margin:12px 0 0 0;font-size:14px;color:#333;">
+          Always use this Order ID when you contact us or when you check your order status on our website.
+        </p>
+      </div>
+
       <p>Your order <strong>${escapeHtml(orderId)}</strong> status is now:</p>
       <p style="font-size: 16px; font-weight: 700; color: #10197E;">${escapeHtml(
         statusInfo.label,
       )}</p>
       <p>${escapeHtml(statusInfo.summary)}</p>
-      ${placedAt ? `<p><strong>Order Date:</strong> ${escapeHtml(placedAt.toLocaleString("en-IN"))}</p>` : ""}
-      <p><strong>Total:</strong> ₹${escapeHtml(formatCurrency(total))}</p>
+
+      <hr style="border: none; border-top: 1px solid #ddd; margin: 22px 0;">
+      <h3 style="margin:0 0 12px 0;color:#10197E;">Complete order details</h3>
+      ${placedAt ? `<p><strong>Order date:</strong> ${escapeHtml(placedAt.toLocaleString("en-IN"))}</p>` : ""}
       ${paymentId ? `<p><strong>Payment ID:</strong> ${escapeHtml(paymentId)}</p>` : ""}
-      ${address ? `<p><strong>Delivery Address:</strong><br>${formatMultiline(address)}</p>` : ""}
-      ${
-        itemsHTML
-          ? `
-      <h3 style="margin-top:18px;">Order Details:</h3>
-      <table style="width: 100%; border-collapse: collapse;">
+      ${address ? `<p><strong>Delivery address:</strong><br>${formatMultiline(address)}</p>` : ""}
+      ${customerEmail ? `<p><strong>Email on order:</strong> ${escapeHtml(customerEmail)}</p>` : ""}
+
+      <table style="width: 100%; border-collapse: collapse; margin-top: 14px;">
         <thead>
           <tr style="background-color: #f5f5f5;">
             <th style="padding: 8px; text-align: left; border-bottom: 2px solid #ddd;">Item</th>
@@ -333,20 +351,31 @@ async function sendOrderStatusEmail({
             <th style="padding: 8px; text-align: right; border-bottom: 2px solid #ddd;">Subtotal</th>
           </tr>
         </thead>
-        <tbody>${itemsHTML}</tbody>
+        <tbody>${itemsBodyHTML}</tbody>
+        <tfoot>
+          <tr>
+            <td colspan="3" style="padding: 8px; text-align: right; border-top: 2px solid #ddd;"><strong>Order total</strong></td>
+            <td style="padding: 8px; text-align: right; border-top: 2px solid #ddd;"><strong>₹${escapeHtml(
+              formatCurrency(total),
+            )}</strong></td>
+          </tr>
+        </tfoot>
       </table>
-      `
-          : ""
-      }
-      <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-      <p><strong>Track your order:</strong> Use this Order ID on our website to track status.</p>
-      <p>
-        Track link:
-        <a href="${escapeHtml(trackOrderUrl)}">${escapeHtml(trackOrderUrl)}</a>
-      </p>
-      <p>If you have any queries, call us at <a href="tel:${escapeHtml(
-        supportPhone.replace(/\s+/g, ""),
-      )}">${escapeHtml(supportPhone)}</a>.</p>
+
+      <div style="margin:24px 0;padding:16px 18px;background:#fafbff;border-left:4px solid #10197E;border-radius:4px;">
+        <p style="margin:0 0 10px 0;"><strong>For any queries,</strong> contact us at our number:
+          <a href="tel:${telHref}" style="color:#10197E;font-weight:700;">${escapeHtml(supportPhone)}</a>.
+        </p>
+        <p style="margin:0 0 10px 0;">
+          <strong>Check your order status</strong> on our website anytime using your Order ID
+          (<strong>${escapeHtml(orderId)}</strong>). Open the Track order page and enter this ID when asked.
+        </p>
+        <p style="margin:0;font-size:14px;">
+          Direct link:
+          <a href="${escapeHtml(trackOrderUrl)}" style="color:#10197E;">${escapeHtml(trackOrderUrl)}</a>
+        </p>
+      </div>
+
       <p>Thank you for shopping with us.</p>
       <p>Best regards,<br>Karthikeyan Analysis Team</p>
     </div>
