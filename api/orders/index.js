@@ -43,11 +43,10 @@ function getSupportPhone() {
   return process.env.SUPPORT_PHONE || process.env.ADMIN_PHONE || "+91 63859 39895";
 }
 
-function getTrackOrderUrl(orderId) {
+function getTrackOrderUrl() {
   const base = process.env.FRONTEND_URL || "https://www.karthikeyananalysis.in";
   const safeBase = String(base).replace(/\/+$/, "");
-  const id = encodeURIComponent(String(orderId || "").trim());
-  return `${safeBase}/track-order/${id}`;
+  return `${safeBase}/track-order`;
 }
 
 function buildOrderItemsTable(items) {
@@ -184,7 +183,7 @@ async function sendOrderConfirmation({
   const itemsHTML = buildOrderItemsTable(items);
   const placedAt = normalizeDate(orderDate) || new Date();
   const supportPhone = getSupportPhone();
-  const trackOrderUrl = getTrackOrderUrl(orderId);
+  const trackOrderUrl = getTrackOrderUrl();
   const statusHuman = formatHumanOrderStatus(orderStatusLabel);
 
   const htmlContent = `
@@ -314,7 +313,7 @@ async function sendOrderStatusEmail({
       </tr>`;
   const supportPhone = getSupportPhone();
   const telHref = escapeHtml(supportPhone.replace(/\s+/g, ""));
-  const trackOrderUrl = getTrackOrderUrl(orderId);
+  const trackOrderUrl = getTrackOrderUrl();
   const placedAt = normalizeDate(orderDate);
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
