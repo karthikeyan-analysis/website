@@ -19,7 +19,7 @@ import {
   deleteObject,
 } from "firebase/storage";
 import { db, storage } from "../config/firebase";
-import { categoriesAPI, contactsAPI, ordersAPI, paymentsAPI, productsAPI } from "./api";
+import { categoriesAPI, contactsAPI, ordersAPI, paymentsAPI } from "./api";
 
 // Products Service
 export const productsService = {
@@ -42,7 +42,14 @@ export const productsService = {
 
   async addProduct(productData) {
     try {
-      return await productsAPI.create(productData);
+      const now = new Date();
+      const payload = {
+        ...productData,
+        createdAt: now,
+        updatedAt: now,
+      };
+      const docRef = await addDoc(collection(db, "products"), payload);
+      return { id: docRef.id, ...payload };
     } catch (error) {
       console.error("Error adding product:", error);
       throw error;
@@ -55,13 +62,8 @@ export const productsService = {
       const querySnapshot = await getDocs(q);
       return querySnapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
     } catch (error) {
-      // Fallback to API if Firestore rules block direct client reads.
-      try {
-        return await productsAPI.getAll();
-      } catch (apiError) {
-        console.error("Error fetching products:", apiError);
-        throw apiError;
-      }
+      console.error("Error fetching products:", error);
+      throw error;
     }
   },
 
@@ -72,13 +74,8 @@ export const productsService = {
       if (!snap.exists()) return null;
       return { id: snap.id, ...snap.data() };
     } catch (error) {
-      // Fallback to API if Firestore rules block direct client reads.
-      try {
-        return await productsAPI.getById(productId);
-      } catch (apiError) {
-        console.error("Error fetching product:", apiError);
-        throw apiError;
-      }
+      console.error("Error fetching product:", error);
+      throw error;
     }
   },
 
@@ -129,7 +126,13 @@ export const productsService = {
 
   async updateProduct(productId, productData) {
     try {
-      return await productsAPI.update(productId, productData);
+      const ref = doc(db, "products", String(productId));
+      await updateDoc(ref, {
+        ...productData,
+        updatedAt: new Date(),
+      });
+      const snap = await getDoc(ref);
+      return snap.exists() ? { id: snap.id, ...snap.data() } : { id: productId };
     } catch (error) {
       console.error("Error updating product:", error);
       throw error;
@@ -138,7 +141,7 @@ export const productsService = {
 
   async deleteProduct(productId) {
     try {
-      await productsAPI.delete(productId);
+      await deleteDoc(doc(db, "products", String(productId)));
       return true;
     } catch (error) {
       console.error("Error deleting product:", error);
