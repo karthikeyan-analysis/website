@@ -37,6 +37,7 @@ const ContactPage = lazy(() => import("./pages/ContactPage"));
 const BookStorePage = lazy(() => import("./pages/BookStorePage"));
 const ProductDetailsPage = lazy(() => import("./pages/ProductDetailsPage"));
 const OrderPlacedPage = lazy(() => import("./pages/OrderPlacedPage"));
+const TrackOrderPage = lazy(() => import("./pages/TrackOrderPage"));
 
 // Policy Pages
 const PrivacyPolicyPage = lazy(() => import("./pages/PrivacyPolicyPage"));
@@ -108,6 +109,7 @@ function App() {
               <Route path="/book-store" element={<BookStorePage />} />
               <Route path="/book-store/:id" element={<ProductDetailsPage />} />
               <Route path="/order-placed/:id" element={<OrderPlacedPage />} />
+              <Route path="/track-order" element={<TrackOrderPage />} />
 
               {/* Policy Routes */}
               <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />

@@ -92,6 +92,9 @@ export default function OrderPlacedPage() {
                       {copied ? "Copied" : "Copy ID"}
                     </button>
                   </div>
+                  <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800 ring-1 ring-amber-200">
+                    Please copy and store this Order ID safely. You can use it to track your order on our website.
+                  </p>
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -147,6 +150,11 @@ export default function OrderPlacedPage() {
                 </div>
 
                 <div className="flex flex-wrap gap-3">
+                  <Link to={`/track-order?id=${encodeURIComponent(order.id)}`}>
+                    <Button type="button" variant="secondary">
+                      Track This Order
+                    </Button>
+                  </Link>
                   <Link to="/book-store">
                     <Button type="button">Continue Shopping</Button>
                   </Link>
