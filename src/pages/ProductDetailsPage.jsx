@@ -1,6 +1,6 @@
-import { Star } from "lucide-react";
+import { ArrowLeft, Star } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import PageLayout from "../components/layout/PageLayout";
 import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
@@ -30,6 +30,7 @@ function formatDate(value) {
 
 export default function ProductDetailsPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { addToCart } = useCart();
   const [product, setProduct] = useState(null);
   const [reviews, setReviews] = useState([]);
@@ -111,21 +112,30 @@ export default function ProductDetailsPage() {
       title={product?.name || "Product Details"}
       subtitle="View complete book details and ratings from learners."
     >
-      <section className="py-10">
+      <section className="py-6 sm:py-8 lg:py-10">
         <Container>
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="mb-5 inline-flex items-center gap-2 rounded-lg border border-black/10 bg-white px-3 py-2 text-sm font-medium text-brand-navy transition hover:bg-black/[0.03]"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </button>
+
           {loading ? (
             <div className="py-12 text-center text-brand-black/60">Loading product...</div>
           ) : !product ? (
             <div className="py-12 text-center text-brand-black/60">Product not found.</div>
           ) : (
-            <div className="space-y-8">
-              <Card className="grid gap-6 p-5 md:grid-cols-[360px,1fr]">
+            <div className="space-y-6 sm:space-y-8">
+              <Card className="grid gap-5 p-4 sm:gap-6 sm:p-6 lg:grid-cols-[minmax(280px,380px),1fr]">
                 <div className="overflow-hidden rounded-xl border border-black/10 bg-black/[0.02]">
                   {product.image ? (
                     <img
                       src={product.image}
                       alt={product.name}
-                      className="h-full min-h-[260px] w-full object-cover"
+                      className="h-full min-h-[240px] w-full object-cover sm:min-h-[300px]"
                     />
                   ) : (
                     <div className="grid min-h-[260px] place-items-center text-brand-black/45">
@@ -134,15 +144,21 @@ export default function ProductDetailsPage() {
                   )}
                 </div>
 
-                <div>
+                <div className="min-w-0">
                   <p className="text-xs uppercase tracking-wide text-brand-purple">
                     {product.category || "Books"}
                   </p>
-                  <h1 className="mt-2 text-2xl font-bold text-brand-navy">{product.name}</h1>
-                  <p className="mt-3 text-sm text-brand-black/70">{product.description}</p>
+                  <h1 className="mt-2 text-xl font-bold leading-snug text-brand-navy sm:text-2xl lg:text-3xl">
+                    {product.name}
+                  </h1>
+                  <p className="mt-3 text-sm leading-relaxed text-brand-black/70 sm:text-[15px]">
+                    {product.description}
+                  </p>
 
-                  <div className="mt-5 flex items-end gap-3">
-                    <p className="text-3xl font-bold text-brand-navy">Rs. {selling.toFixed(2)}</p>
+                  <div className="mt-5 flex flex-wrap items-end gap-2 sm:gap-3">
+                    <p className="text-2xl font-bold text-brand-navy sm:text-3xl">
+                      Rs. {selling.toFixed(2)}
+                    </p>
                     {hasDiscount ? (
                       <>
                         <p className="text-base text-brand-black/45 line-through">
@@ -159,10 +175,11 @@ export default function ProductDetailsPage() {
                     Stock available: {product.stock ?? 0}
                   </p>
 
-                  <div className="mt-5">
+                  <div className="mt-5 w-full sm:w-auto">
                     <Button
                       disabled={Number(product.stock || 0) <= 0}
                       onClick={() => Number(product.stock || 0) > 0 && addToCart(product)}
+                      className="w-full sm:w-auto"
                     >
                       {Number(product.stock || 0) > 0 ? "Add to Cart" : "Out of stock"}
                     </Button>
@@ -170,8 +187,8 @@ export default function ProductDetailsPage() {
                 </div>
               </Card>
 
-              <Card className="p-5">
-                <div className="mb-4 flex items-center justify-between">
+              <Card className="p-4 sm:p-6">
+                <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <h2 className="text-xl font-semibold text-brand-navy">Ratings & Reviews</h2>
                   <p className="text-sm text-brand-black/70">
                     {reviewStats.count} review{reviewStats.count === 1 ? "" : "s"} •{" "}
@@ -214,14 +231,17 @@ export default function ProductDetailsPage() {
                   )}
                 </div>
 
-                <form onSubmit={submitReview} className="mt-6 space-y-3 rounded-lg border border-black/10 p-4">
+                <form
+                  onSubmit={submitReview}
+                  className="mt-6 space-y-3 rounded-lg border border-black/10 bg-white p-4 sm:p-5"
+                >
                   <h3 className="text-lg font-semibold text-brand-navy">Write a review</h3>
 
                   {error ? (
                     <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
                   ) : null}
 
-                  <div className="grid gap-3 md:grid-cols-2">
+                  <div className="grid gap-3 sm:grid-cols-2">
                     <input
                       type="text"
                       placeholder="Your name"
@@ -245,7 +265,7 @@ export default function ProductDetailsPage() {
                       onChange={(e) =>
                         setReviewForm((p) => ({ ...p, rating: Number(e.target.value) }))
                       }
-                      className="rounded-lg border border-black/10 px-3 py-2 outline-none focus:border-brand-navy"
+                      className="w-full rounded-lg border border-black/10 px-3 py-2 outline-none focus:border-brand-navy sm:w-auto"
                     >
                       {[5, 4, 3, 2, 1].map((n) => (
                         <option key={n} value={n}>
