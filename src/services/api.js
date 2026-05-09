@@ -69,14 +69,14 @@ export const categoriesAPI = {
   },
 
   async delete(id) {
-    // Some hosts (or proxies) block DELETE requests. Use method override via POST.
+    // Some hosts (or proxies) block DELETE (and sometimes POST) requests on dynamic routes.
+    // Use PUT with a delete flag so it still works behind restrictive proxies.
     return apiCall(`/categories/${id}`, {
-      method: "POST",
+      method: "PUT",
       headers: {
         "Content-Type": "application/json",
-        "X-HTTP-Method-Override": "DELETE",
       },
-      body: JSON.stringify({ _method: "DELETE" }),
+      body: JSON.stringify({ _delete: true }),
     });
   },
 };
