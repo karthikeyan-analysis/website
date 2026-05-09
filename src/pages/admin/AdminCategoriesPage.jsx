@@ -68,6 +68,10 @@ export default function AdminCategoriesPage() {
     setError(null);
 
     try {
+      const existingImage = editingId
+        ? categories.find((c) => c.id === editingId)?.image || ""
+        : "";
+
       const uploadedImageUrl = imageFile
         ? await categoriesService.uploadCategoryImage(imageFile)
         : "";
@@ -75,7 +79,7 @@ export default function AdminCategoriesPage() {
       const categoryData = {
         name: formData.name.trim(),
         description: formData.description.trim(),
-        image: (uploadedImageUrl || formData.image).trim(),
+        image: (uploadedImageUrl || existingImage).trim(),
       };
 
       if (editingId) {
@@ -244,14 +248,11 @@ export default function AdminCategoriesPage() {
                       onChange={(e) => {
                         const file = e.target.files?.[0] || null;
                         setImageFile(file);
-                        if (file) {
-                          setFormData((prev) => ({ ...prev, image: "" }));
-                        }
                       }}
                       className="block w-full rounded-lg border border-black/10 bg-white px-4 py-2 transition focus:border-brand-navy focus:outline-none"
                     />
                     <p className="mt-1 text-xs text-brand-black/50">
-                      Upload an image (recommended), or use an image URL below.
+                      Upload an image for this category.
                     </p>
                   </div>
 
@@ -270,33 +271,13 @@ export default function AdminCategoriesPage() {
                       onClick={() => {
                         setImageFile(null);
                         setImagePreview("");
+                        setFormData((prev) => ({ ...prev, image: "" }));
                       }}
                       className="rounded-lg border border-black/10 px-3 py-2 text-sm transition hover:bg-black/5"
                     >
                       Clear
                     </button>
                   </div>
-                </div>
-
-                <div className="mt-3">
-                  <label className="block text-sm font-medium text-brand-black/80">
-                    Image URL (optional)
-                  </label>
-                  <input
-                    type="url"
-                    value={formData.image}
-                    onChange={(e) => {
-                      setFormData({ ...formData, image: e.target.value });
-                      if (e.target.value) {
-                        setImageFile(null);
-                        setImagePreview(e.target.value);
-                      } else if (!imageFile) {
-                        setImagePreview("");
-                      }
-                    }}
-                    className="mt-1 w-full rounded-lg border border-black/10 px-4 py-2 transition focus:border-brand-navy focus:outline-none"
-                    placeholder="https://example.com/image.jpg"
-                  />
                 </div>
               </div>
 

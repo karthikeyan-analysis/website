@@ -69,8 +69,14 @@ export const categoriesAPI = {
   },
 
   async delete(id) {
+    // Some hosts (or proxies) block DELETE requests. Use method override via POST.
     return apiCall(`/categories/${id}`, {
-      method: "DELETE",
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-HTTP-Method-Override": "DELETE",
+      },
+      body: JSON.stringify({ _method: "DELETE" }),
     });
   },
 };

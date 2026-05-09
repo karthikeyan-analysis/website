@@ -144,9 +144,16 @@ export default function BookStorePage() {
                       {product.description}
                     </p>
                     <div className="mt-4">
-                      <p className="text-2xl font-bold text-brand-navy">
-                        Rs. {parseFloat(product.price).toFixed(2)}
-                      </p>
+                      <div className="flex items-end gap-2">
+                        <p className="text-2xl font-bold text-brand-navy">
+                          Rs. {parseFloat(product.price).toFixed(2)}
+                        </p>
+                        {product.mrpPrice && Number(product.mrpPrice) > Number(product.price) ? (
+                          <p className="text-sm text-brand-black/45 line-through">
+                            Rs. {parseFloat(product.mrpPrice).toFixed(2)}
+                          </p>
+                        ) : null}
+                      </div>
                       <p className="text-xs text-gray-500 mt-1">
                         Stock: {product.stock}
                       </p>

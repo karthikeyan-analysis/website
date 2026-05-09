@@ -23,6 +23,23 @@ import { categoriesAPI, contactsAPI, ordersAPI, paymentsAPI, productsAPI } from 
 
 // Products Service
 export const productsService = {
+  async uploadProductImage(file) {
+    try {
+      if (!file) return "";
+      const timestamp = Date.now();
+      const safeName = String(file.name || "product")
+        .replace(/[^\w.\-]+/g, "_")
+        .slice(0, 120);
+      const fileName = `${timestamp}_${safeName}`;
+      const storageRef = ref(storage, `products/${fileName}`);
+      const snapshot = await uploadBytes(storageRef, file);
+      return await getDownloadURL(snapshot.ref);
+    } catch (error) {
+      console.error("Error uploading product image:", error);
+      throw error;
+    }
+  },
+
   async addProduct(productData) {
     try {
       return await productsAPI.create(productData);

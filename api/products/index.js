@@ -38,6 +38,7 @@ export default async function handler(req, res) {
     if (req.method === "POST") {
       const {
         name,
+        mrpPrice,
         price,
         categoryId,
         category,
@@ -54,6 +55,17 @@ export default async function handler(req, res) {
       if (!Number.isFinite(p) || p <= 0) {
         res.status(400).json({ error: "Valid price is required" });
         return;
+      }
+      const mrpRaw = mrpPrice === null || mrpPrice === undefined || mrpPrice === "" ? null : Number(mrpPrice);
+      if (mrpRaw !== null) {
+        if (!Number.isFinite(mrpRaw) || mrpRaw <= 0) {
+          res.status(400).json({ error: "Valid MRP price is required" });
+          return;
+        }
+        if (mrpRaw < p) {
+          res.status(400).json({ error: "MRP must be >= selling price" });
+          return;
+        }
       }
       if (!categoryId) {
         res.status(400).json({ error: "Category is required" });
@@ -72,6 +84,7 @@ export default async function handler(req, res) {
       const now = new Date();
       const data = {
         name: String(name).trim(),
+        mrpPrice: mrpRaw,
         price: p,
         categoryId: String(categoryId),
         category: category ? String(category).trim() : "",

@@ -18,6 +18,7 @@ export default function AdminProductsPage() {
   const [successMessage, setSuccessMessage] = useState(null);
   const [formData, setFormData] = useState({
     name: "",
+    mrpPrice: "",
     price: "",
     categoryId: "",
     category: "",
@@ -25,12 +26,21 @@ export default function AdminProductsPage() {
     image: "",
     stock: "",
   });
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState("");
   const [errors, setErrors] = useState({});
 
   // Load products and categories
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (!imageFile) return;
+    const next = URL.createObjectURL(imageFile);
+    setImagePreview(next);
+    return () => URL.revokeObjectURL(next);
+  }, [imageFile]);
 
   const loadData = async () => {
     try {
@@ -54,7 +64,15 @@ export default function AdminProductsPage() {
     const newErrors = {};
     if (!formData.name.trim()) newErrors.name = "Product name is required";
     if (!formData.price || formData.price <= 0)
-      newErrors.price = "Valid price is required";
+      newErrors.price = "Valid selling price is required";
+    if (formData.mrpPrice !== "" && Number(formData.mrpPrice) > 0) {
+      const mrp = Number(formData.mrpPrice);
+      if (!Number.isFinite(mrp) || mrp <= 0) {
+        newErrors.mrpPrice = "Valid MRP is required";
+      } else if (Number(formData.price) > 0 && mrp < Number(formData.price)) {
+        newErrors.mrpPrice = "MRP must be >= selling price";
+      }
+    }
     if (!formData.categoryId) newErrors.categoryId = "Category is required";
     if (!formData.stock || formData.stock < 0)
       newErrors.stock = "Valid stock quantity is required";
@@ -80,13 +98,24 @@ export default function AdminProductsPage() {
         (c) => c.id === formData.categoryId,
       );
 
+      const existingImage = editingId
+        ? products.find((p) => p.id === editingId)?.image || ""
+        : "";
+
+      const uploadedImageUrl = imageFile
+        ? await productsService.uploadProductImage(imageFile)
+        : "";
+
       const productData = {
         name: formData.name.trim(),
+        // Keep `price` as selling price for backward compatibility
         price: parseFloat(formData.price),
+        mrpPrice:
+          formData.mrpPrice === "" ? null : parseFloat(formData.mrpPrice),
         categoryId: formData.categoryId,
         category: selectedCategory?.name || formData.category,
         description: formData.description.trim(),
-        image: formData.image.trim() || "",
+        image: (uploadedImageUrl || existingImage).trim() || "",
         stock: parseInt(formData.stock),
       };
 
@@ -118,6 +147,7 @@ export default function AdminProductsPage() {
   const handleEdit = (product) => {
     setFormData({
       name: product.name,
+      mrpPrice: product.mrpPrice ?? "",
       price: product.price,
       categoryId: product.categoryId || "",
       category: product.category || "",
@@ -125,6 +155,8 @@ export default function AdminProductsPage() {
       image: product.image || "",
       stock: product.stock,
     });
+    setImageFile(null);
+    setImagePreview(product.image || "");
     setEditingId(product.id);
     setShowForm(true);
     setErrors({});
@@ -154,6 +186,7 @@ export default function AdminProductsPage() {
   const resetForm = () => {
     setFormData({
       name: "",
+      mrpPrice: "",
       price: "",
       categoryId: "",
       category: "",
@@ -161,6 +194,8 @@ export default function AdminProductsPage() {
       image: "",
       stock: "",
     });
+    setImageFile(null);
+    setImagePreview("");
     setEditingId(null);
     setShowForm(false);
     setErrors({});
@@ -246,7 +281,7 @@ export default function AdminProductsPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-brand-black/80">
-                    Price (₹) *
+                    Selling Price (₹) *
                   </label>
                   <input
                     type="number"
@@ -262,6 +297,29 @@ export default function AdminProductsPage() {
                   />
                   {errors.price && (
                     <p className="mt-1 text-sm text-red-500">{errors.price}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-brand-black/80">
+                    MRP Price (₹)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={formData.mrpPrice}
+                    onChange={(e) =>
+                      setFormData({ ...formData, mrpPrice: e.target.value })
+                    }
+                    className={`mt-1 w-full rounded-lg border ${
+                      errors.mrpPrice ? "border-red-500" : "border-black/10"
+                    } px-4 py-2 transition focus:border-brand-navy focus:outline-none`}
+                    placeholder="0.00"
+                  />
+                  {errors.mrpPrice && (
+                    <p className="mt-1 text-sm text-red-500">
+                      {errors.mrpPrice}
+                    </p>
                   )}
                 </div>
 
@@ -337,17 +395,47 @@ export default function AdminProductsPage() {
 
               <div>
                 <label className="block text-sm font-medium text-brand-black/80">
-                  Image URL
+                  Product Image
                 </label>
-                <input
-                  type="url"
-                  value={formData.image}
-                  onChange={(e) =>
-                    setFormData({ ...formData, image: e.target.value })
-                  }
-                  className="mt-1 w-full rounded-lg border border-black/10 px-4 py-2 transition focus:border-brand-navy focus:outline-none"
-                  placeholder="https://example.com/image.jpg"
-                />
+                <div className="mt-1 grid gap-3 md:grid-cols-2">
+                  <div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null;
+                        setImageFile(file);
+                      }}
+                      className="block w-full rounded-lg border border-black/10 bg-white px-4 py-2 transition focus:border-brand-navy focus:outline-none"
+                    />
+                    <p className="mt-1 text-xs text-brand-black/50">
+                      Upload an image for this product.
+                    </p>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    {imagePreview ? (
+                      <img
+                        src={imagePreview}
+                        alt="Product preview"
+                        className="h-20 w-20 rounded-lg object-cover border border-black/10"
+                      />
+                    ) : (
+                      <div className="h-20 w-20 rounded-lg border border-dashed border-black/20 bg-black/2" />
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setImageFile(null);
+                        setImagePreview("");
+                        setFormData((prev) => ({ ...prev, image: "" }));
+                      }}
+                      className="rounded-lg border border-black/10 px-3 py-2 text-sm transition hover:bg-black/5"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <div className="flex gap-3 pt-4">

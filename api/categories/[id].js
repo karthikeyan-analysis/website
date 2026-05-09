@@ -15,7 +15,7 @@ export default async function handler(req, res) {
   );
   res.setHeader(
     "Access-Control-Allow-Headers",
-    "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version",
+    "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, X-HTTP-Method-Override",
   );
 
   if (req.method === "OPTIONS") {
@@ -29,11 +29,21 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Invalid category id" });
     }
 
+    const overrideHeader = req.headers["x-http-method-override"];
+    const overrideBody = req.body?._method;
+    const methodOverride =
+      typeof overrideHeader === "string"
+        ? overrideHeader.toUpperCase()
+        : typeof overrideBody === "string"
+          ? overrideBody.toUpperCase()
+          : null;
+    const method = req.method === "POST" && methodOverride ? methodOverride : req.method;
+
     if (req.method === "GET") {
       const snap = await categoriesCollection().doc(id).get();
       if (!snap.exists) return res.status(404).json({ error: "Category not found" });
       res.status(200).json({ id: snap.id, ...snap.data() });
-    } else if (req.method === "PUT") {
+    } else if (method === "PUT") {
       const { name, description, image } = req.body;
 
       const ref = categoriesCollection().doc(id);
@@ -55,7 +65,7 @@ export default async function handler(req, res) {
       res
         .status(200)
         .json({ success: true, message: "Category updated successfully" });
-    } else if (req.method === "DELETE") {
+    } else if (method === "DELETE") {
       const ref = categoriesCollection().doc(id);
       const snap = await ref.get();
       if (!snap.exists) return res.status(404).json({ error: "Category not found" });
