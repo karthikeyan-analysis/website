@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { ShoppingBag } from "lucide-react";
+import { useLocation } from "react-router-dom";
+import { useCart } from "../hooks/useCart";
 
 const socialLinks = [
   {
@@ -31,6 +34,11 @@ const socialLinks = [
 export default function FloatingButtons() {
   const [collapsed, setCollapsed] = useState(false);
   const [showHint, setShowHint] = useState(false);
+  const location = useLocation();
+  const { itemCount, setIsOpen } = useCart();
+  const pathname = location.pathname || "";
+  const isShopRoute =
+    pathname.startsWith("/book-store") || pathname.startsWith("/shop");
 
   useEffect(() => {
     try {
@@ -55,18 +63,19 @@ export default function FloatingButtons() {
   };
 
   return (
-    <div
-      className="floating-buttons pointer-events-none opacity-100 transition-opacity duration-200"
-      style={{
-        position: "fixed",
-        bottom: "max(1.25rem, env(safe-area-inset-bottom, 1.25rem))",
-        right: "max(1rem, env(safe-area-inset-right, 1rem))",
-        zIndex: 9999,
-        display: "flex",
-        flexDirection: "column",
-        gap: "10px",
-      }}
-    >
+    <>
+      <div
+        className="floating-buttons pointer-events-none opacity-100 transition-opacity duration-200"
+        style={{
+          position: "fixed",
+          bottom: "max(1.25rem, env(safe-area-inset-bottom, 1.25rem))",
+          right: "max(1rem, env(safe-area-inset-right, 1rem))",
+          zIndex: 9999,
+          display: "flex",
+          flexDirection: "column",
+          gap: "10px",
+        }}
+      >
       {/* Collapse / Expand */}
       <div className="relative ml-auto" style={{ pointerEvents: "auto" }}>
         <AnimatePresence initial={false}>
@@ -165,6 +174,33 @@ export default function FloatingButtons() {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+      </div>
+      {isShopRoute ? (
+        <div
+          className="pointer-events-none"
+          style={{
+            position: "fixed",
+            bottom: "max(1.25rem, env(safe-area-inset-bottom, 1.25rem))",
+            left: "max(1rem, env(safe-area-inset-left, 1rem))",
+            zIndex: 9999,
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setIsOpen(true)}
+            className="pointer-events-auto relative inline-flex h-12 w-12 items-center justify-center rounded-full bg-brand-navy text-white shadow-[0_10px_24px_-8px_rgba(0,0,0,0.35)] ring-1 ring-black/10 transition active:scale-95 hover:bg-brand-navy/90 sm:h-14 sm:w-14"
+            aria-label="Open cart"
+            title="Open cart"
+          >
+            <ShoppingBag className="h-5 w-5 sm:h-6 sm:w-6" />
+            {itemCount > 0 ? (
+              <span className="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-brand-orange px-1 text-[11px] font-bold text-white sm:min-h-6 sm:min-w-6 sm:text-xs">
+                {itemCount > 99 ? "99+" : itemCount}
+              </span>
+            ) : null}
+          </button>
+        </div>
+      ) : null}
+    </>
   );
 }
