@@ -1,18 +1,12 @@
-import {
-  escapeHtml,
-  formatMultiline,
-  getAdminEmail,
-  safeSendMail,
-} from "../../server/mailer.js";
-import { getAdminDb } from "../../server/firebaseAdmin.js";
-
 async function sendContactConfirmation({
+  deps,
   name,
   email,
   phone,
   subject,
   message,
 }) {
+  const { escapeHtml, formatMultiline, getAdminEmail, safeSendMail } = deps;
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h2 style="color: #10197E;">Contact Form Received</h2>
@@ -37,6 +31,7 @@ async function sendContactConfirmation({
 }
 
 async function sendAdminNotification({
+  deps,
   name,
   email,
   phone,
@@ -44,6 +39,7 @@ async function sendAdminNotification({
   message,
   submissionId,
 }) {
+  const { escapeHtml, formatMultiline, getAdminEmail, safeSendMail } = deps;
   const adminHtmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h2 style="color: #10197E;">New Contact Form Submission</h2>
@@ -67,7 +63,7 @@ async function sendAdminNotification({
   });
 }
 
-function contactsCollection() {
+function contactsCollection(getAdminDb) {
   const db = getAdminDb();
   return db.collection("contacts");
 }
@@ -106,11 +102,34 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "All fields are required" });
     }
 
+    // Dynamic imports prevent module-load crashes from becoming FUNCTION_INVOCATION_FAILED.
+    let deps = null;
+    let getAdminDb = null;
+    try {
+      const mailer = await import("../../server/mailer.js");
+      deps = {
+        escapeHtml: mailer.escapeHtml,
+        formatMultiline: mailer.formatMultiline,
+        getAdminEmail: mailer.getAdminEmail,
+        safeSendMail: mailer.safeSendMail,
+      };
+    } catch (e) {
+      console.error("Failed to load mailer module:", e);
+    }
+
+    try {
+      const admin = await import("../../server/firebaseAdmin.js");
+      getAdminDb = admin.getAdminDb;
+    } catch (e) {
+      console.error("Failed to load firebase admin module:", e);
+    }
+
     let submissionId = `contact_${Date.now()}`;
     let persistence = { ok: true, source: "firestore" };
-    try {
+    if (typeof getAdminDb === "function") {
+      try {
       // Persist to Firestore (primary source of truth)
-      const docRef = await contactsCollection().add({
+        const docRef = await contactsCollection(getAdminDb).add({
         name,
         email,
         phone,
@@ -128,33 +147,47 @@ export default async function handler(req, res) {
         userAgent: req.headers["user-agent"] || "",
       });
       submissionId = docRef.id;
-    } catch (persistError) {
+      } catch (persistError) {
+        persistence = {
+          ok: false,
+          source: "mail_only",
+          error: persistError?.message || "FIRESTORE_SAVE_FAILED",
+        };
+        console.error("Contact save failed:", persistError);
+      }
+    } else {
       persistence = {
         ok: false,
         source: "mail_only",
-        error: persistError?.message || "FIRESTORE_SAVE_FAILED",
+        error: "FIREBASE_ADMIN_MODULE_NOT_AVAILABLE",
       };
-      console.error("Contact save failed:", persistError);
     }
 
     // Send emails. Use allSettled so one failure doesn't mask the other.
-    const [userMailRes, adminMailRes] = await Promise.allSettled([
-      sendContactConfirmation({
-        name,
-        email,
-        phone,
-        subject: normalizedSubject,
-        message,
-      }),
-      sendAdminNotification({
-        name,
-        email,
-        phone,
-        subject: normalizedSubject,
-        message,
-        submissionId,
-      }),
-    ]);
+    const [userMailRes, adminMailRes] = deps
+      ? await Promise.allSettled([
+          sendContactConfirmation({
+            deps,
+            name,
+            email,
+            phone,
+            subject: normalizedSubject,
+            message,
+          }),
+          sendAdminNotification({
+            deps,
+            name,
+            email,
+            phone,
+            subject: normalizedSubject,
+            message,
+            submissionId,
+          }),
+        ])
+      : [
+          { status: "rejected", reason: new Error("MAILER_MODULE_NOT_AVAILABLE") },
+          { status: "rejected", reason: new Error("MAILER_MODULE_NOT_AVAILABLE") },
+        ];
 
     const toEmailResult = (result) =>
       result.status === "fulfilled"
