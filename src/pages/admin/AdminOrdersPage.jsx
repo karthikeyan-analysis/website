@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import AdminLayout from "../../components/admin/AdminLayout";
-import { Eye, Trash2, CheckCircle } from "lucide-react";
+import { Eye, Trash2, CheckCircle, Download } from "lucide-react";
+import * as XLSX from "xlsx";
 import { ordersService } from "../../services/firebaseService";
 
 function formatDate(value) {
@@ -51,6 +52,87 @@ function getPlacedOnValue(order) {
   );
 }
 
+function parsePlacedDate(value) {
+  if (!value) return null;
+  const date = (() => {
+    if (typeof value === "string" || value instanceof Date) return new Date(value);
+    if (typeof value?.toDate === "function") return value.toDate();
+    if (value?.seconds) return new Date(value.seconds * 1000);
+    if (value?._seconds) return new Date(value._seconds * 1000);
+    return null;
+  })();
+  if (!date || Number.isNaN(date.getTime())) return null;
+  return date;
+}
+
+function summarizeLineItems(order) {
+  const items = Array.isArray(order?.items) ? order.items : [];
+  if (!items.length) return "";
+  return items
+    .map((item) => {
+      const qty = Number(item?.qty ?? item?.quantity ?? 1);
+      const name = String(item?.name ?? "Item").trim() || "Item";
+      return `${name} × ${qty}`;
+    })
+    .join("; ");
+}
+
+function normalizeOrderStatus(order) {
+  return String(order?.status ?? "Paid").trim().toLowerCase();
+}
+
+function startOfDayMs(isoDateStr) {
+  const d = new Date(`${isoDateStr}T00:00:00`);
+  return d.getTime();
+}
+
+function endOfDayMs(isoDateStr) {
+  const d = new Date(`${isoDateStr}T23:59:59.999`);
+  return d.getTime();
+}
+
+function passesExportDateFilter(order, fromIso, toIso) {
+  if (!fromIso && !toIso) return true;
+  const t = parsePlacedDate(getPlacedOnValue(order))?.getTime();
+  if (t == null) return false;
+  if (fromIso && t < startOfDayMs(fromIso)) return false;
+  if (toIso && t > endOfDayMs(toIso)) return false;
+  return true;
+}
+
+function passesExportStatusFilter(order, statusFilter) {
+  if (statusFilter === "all") return true;
+  return normalizeOrderStatus(order) === statusFilter;
+}
+
+function filterOrdersForExport(orders, { fromDate, toDate, statusFilter }) {
+  return orders.filter(
+    (o) =>
+      passesExportDateFilter(o, fromDate, toDate) &&
+      passesExportStatusFilter(o, statusFilter),
+  );
+}
+
+function buildDailySummaryRows(orders) {
+  const map = new Map();
+  for (const order of orders) {
+    const d = parsePlacedDate(getPlacedOnValue(order));
+    const key = d ? d.toISOString().slice(0, 10) : "Unknown date";
+    const prev = map.get(key) || { count: 0, total: 0 };
+    const amt = Number(order?.total || 0);
+    prev.count += 1;
+    prev.total += Number.isFinite(amt) ? amt : 0;
+    map.set(key, prev);
+  }
+  return [...map.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([dateKey, { count, total }]) => ({
+      Date: dateKey,
+      "Order count": count,
+      "Total (INR)": Math.round(total * 100) / 100,
+    }));
+}
+
 function getStatusLabel(status) {
   const normalized = String(status || "").trim().toLowerCase();
   if (normalized === "completed") return "Delivered";
@@ -67,6 +149,9 @@ export default function AdminOrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [exportFromDate, setExportFromDate] = useState("");
+  const [exportToDate, setExportToDate] = useState("");
+  const [exportStatus, setExportStatus] = useState("all");
 
   useEffect(() => {
     const loadOrders = async () => {
@@ -137,6 +222,60 @@ export default function AdminOrdersPage() {
     { totalOrders: 0, pending: 0, completed: 0, revenue: 0 },
   );
 
+  const exportFilteredOrders = useMemo(
+    () =>
+      filterOrdersForExport(orders, {
+        fromDate: exportFromDate,
+        toDate: exportToDate,
+        statusFilter: exportStatus,
+      }),
+    [orders, exportFromDate, exportToDate, exportStatus],
+  );
+
+  const handleExportExcel = useCallback(() => {
+    if (exportFromDate && exportToDate && exportFromDate > exportToDate) {
+      window.alert("From date cannot be after to date.");
+      return;
+    }
+    if (!exportFilteredOrders.length) {
+      window.alert("No orders match the selected export filters.");
+      return;
+    }
+
+    const sorted = [...exportFilteredOrders].sort((a, b) => {
+      const ta = parsePlacedDate(getPlacedOnValue(a))?.getTime() ?? 0;
+      const tb = parsePlacedDate(getPlacedOnValue(b))?.getTime() ?? 0;
+      return tb - ta;
+    });
+
+    const detailRows = sorted.map((order) => {
+      const placed = parsePlacedDate(getPlacedOnValue(order));
+      return {
+        "Order ID": String(order.id ?? ""),
+        "Order date": placed ? placed.toISOString().slice(0, 10) : "",
+        "Placed on": placed ? placed.toLocaleString("en-IN") : "-",
+        "Customer name": order.customerName || "",
+        Email: order.customerEmail || "",
+        Phone: order.customerPhone || "",
+        "Alt phone": order.customerAltPhone || "",
+        Address: getAddressText(order),
+        Items: summarizeLineItems(order),
+        "Total (INR)": Math.round(Number(order.total || 0) * 100) / 100,
+        Status: getStatusLabel(order.status),
+        "Payment ID": order.razorpay_payment_id || "",
+      };
+    });
+
+    const summaryRows = buildDailySummaryRows(sorted);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(detailRows), "Orders");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summaryRows), "By date");
+
+    const slug = exportStatus === "all" ? "all" : exportStatus;
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+    XLSX.writeFile(wb, `orders-export-${slug}-${stamp}.xlsx`);
+  }, [exportFilteredOrders, exportStatus]);
+
   return (
     <AdminLayout>
       <div className="space-y-6">
@@ -170,6 +309,73 @@ export default function AdminOrdersPage() {
               ₹{formatMoney(orderStats.revenue)}
             </p>
           </div>
+        </div>
+
+        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm space-y-4">
+          <div>
+            <h2 className="text-base font-semibold text-gray-900">Export to Excel</h2>
+            <p className="mt-1 text-sm text-gray-500">
+              Filter by order date and status, then download a spreadsheet. The file has an
+              Orders sheet (one row per order) and a By date sheet (counts and totals per
+              calendar day).
+            </p>
+          </div>
+          <div className="flex flex-wrap items-end gap-4">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                From date
+              </label>
+              <input
+                type="date"
+                value={exportFromDate}
+                onChange={(e) => setExportFromDate(e.target.value)}
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-navy focus:outline-none focus:ring-1 focus:ring-brand-navy"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                To date
+              </label>
+              <input
+                type="date"
+                value={exportToDate}
+                onChange={(e) => setExportToDate(e.target.value)}
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-navy focus:outline-none focus:ring-1 focus:ring-brand-navy"
+              />
+            </div>
+            <div className="flex min-w-[180px] flex-col gap-1">
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                Status
+              </label>
+              <select
+                value={exportStatus}
+                onChange={(e) => setExportStatus(e.target.value)}
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-navy focus:outline-none focus:ring-1 focus:ring-brand-navy"
+              >
+                <option value="all">All orders</option>
+                <option value="pending">Pending only</option>
+                <option value="paid">Paid only</option>
+                <option value="shipped">Shipped only</option>
+                <option value="delivered">Delivered only</option>
+                <option value="completed">Completed only</option>
+                <option value="cancelled">Cancelled only</option>
+              </select>
+            </div>
+            <button
+              type="button"
+              onClick={handleExportExcel}
+              disabled={loading || orders.length === 0}
+              className="inline-flex items-center gap-2 rounded-lg bg-brand-navy px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-navy/90 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Download className="h-4 w-4 shrink-0" />
+              Download .xlsx
+            </button>
+          </div>
+          <p className="text-xs text-gray-500">
+            Showing <span className="font-semibold text-gray-700">{exportFilteredOrders.length}</span>{" "}
+            order{exportFilteredOrders.length === 1 ? "" : "s"} with current filters. Leave dates
+            empty to include all dates.
+          </p>
         </div>
 
         <div className="bg-white rounded-xl shadow-md overflow-hidden">

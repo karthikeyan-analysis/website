@@ -74,14 +74,20 @@ export default function ProductDetailsPage() {
   }, [reviews]);
 
   const productImages = useMemo(() => {
-    const list = [];
+    const seen = new Set();
+    const ordered = [];
     if (Array.isArray(product?.images)) {
-      list.push(...product.images);
+      for (const u of product.images) {
+        const s = String(u || "").trim();
+        if (s && !seen.has(s)) {
+          seen.add(s);
+          ordered.push(s);
+        }
+      }
     }
-    if (product?.image) {
-      list.push(product.image);
-    }
-    return Array.from(new Set(list.map((url) => String(url || "").trim()).filter(Boolean)));
+    if (ordered.length > 0) return ordered;
+    const single = String(product?.image || "").trim();
+    return single ? [single] : [];
   }, [product]);
 
   useEffect(() => {

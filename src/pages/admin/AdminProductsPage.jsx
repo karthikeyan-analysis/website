@@ -1,10 +1,63 @@
-﻿import { useState, useEffect } from "react";
+﻿import { useState, useEffect, useRef } from "react";
 import AdminLayout from "../../components/admin/AdminLayout";
-import { Plus, Edit2, Trash2, X, Save, AlertCircle } from "lucide-react";
+import {
+  Plus,
+  Edit2,
+  Trash2,
+  X,
+  Save,
+  AlertCircle,
+  ChevronUp,
+  ChevronDown,
+} from "lucide-react";
 import {
   productsService,
   categoriesService,
 } from "../../services/firebaseService";
+
+function newGalleryRowId() {
+  return crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function orderedImageUrlsFromProduct(product) {
+  const urls = [];
+  const seen = new Set();
+  if (Array.isArray(product?.images)) {
+    for (const u of product.images) {
+      const s = String(u || "").trim();
+      if (s && !seen.has(s)) {
+        seen.add(s);
+        urls.push(s);
+      }
+    }
+  }
+  const single = String(product?.image || "").trim();
+  if (single && !seen.has(single)) {
+    urls.push(single);
+  }
+  return urls;
+}
+
+function imageGalleryOrderLabel(index) {
+  switch (index) {
+    case 0:
+      return "First";
+    case 1:
+      return "Second";
+    case 2:
+      return "Third";
+    default:
+      return `${index + 1}`;
+  }
+}
+
+function revokeGalleryBlobs(rows) {
+  rows.forEach((row) => {
+    if (typeof row?.preview === "string" && row.preview.startsWith("blob:")) {
+      URL.revokeObjectURL(row.preview);
+    }
+  });
+}
 
 export default function AdminProductsPage() {
   const [products, setProducts] = useState([]);
@@ -26,39 +79,21 @@ export default function AdminProductsPage() {
     image: "",
     stock: "",
   });
-  const [imageFiles, setImageFiles] = useState([]);
-  const [imagePreviews, setImagePreviews] = useState([]);
+  const [galleryRows, setGalleryRows] = useState([]);
   const [errors, setErrors] = useState({});
+  const galleryRowsRef = useRef(galleryRows);
+  galleryRowsRef.current = galleryRows;
 
   // Load products and categories
   useEffect(() => {
     loadData();
   }, []);
 
-  const clearImagePreviews = () => {
-    imagePreviews.forEach((url) => {
-      if (typeof url === "string" && url.startsWith("blob:")) {
-        URL.revokeObjectURL(url);
-      }
-    });
-  };
-
-  const normalizeProductImages = (product) => {
-    const list = [];
-    if (Array.isArray(product?.images)) {
-      list.push(...product.images);
-    }
-    if (product?.image) {
-      list.push(product.image);
-    }
-    return Array.from(new Set(list.map((url) => String(url || "").trim()).filter(Boolean)));
-  };
-
   useEffect(() => {
     return () => {
-      clearImagePreviews();
+      revokeGalleryBlobs(galleryRowsRef.current);
     };
-  }, [imagePreviews]);
+  }, []);
 
   const loadData = async () => {
     try {
@@ -116,16 +151,15 @@ export default function AdminProductsPage() {
         (c) => c.id === formData.categoryId,
       );
 
-      const existingImages = editingId
-        ? normalizeProductImages(products.find((p) => p.id === editingId))
-        : [];
-
-      const uploadedImageUrls = imageFiles.length
-        ? await Promise.all(
-            imageFiles.map((file) => productsService.uploadProductImage(file)),
-          )
-        : [];
-      const finalImages = (uploadedImageUrls.length ? uploadedImageUrls : existingImages)
+      const finalImages = (
+        await Promise.all(
+          galleryRows.map((row) =>
+            row.file
+              ? productsService.uploadProductImage(row.file)
+              : Promise.resolve(row.preview),
+          ),
+        )
+      )
         .map((url) => String(url || "").trim())
         .filter(Boolean);
 
@@ -179,9 +213,14 @@ export default function AdminProductsPage() {
       image: product.image || "",
       stock: product.stock,
     });
-    clearImagePreviews();
-    setImageFiles([]);
-    setImagePreviews(normalizeProductImages(product));
+    setGalleryRows((prev) => {
+      revokeGalleryBlobs(prev);
+      return orderedImageUrlsFromProduct(product).map((url) => ({
+        id: newGalleryRowId(),
+        file: null,
+        preview: url,
+      }));
+    });
     setEditingId(product.id);
     setShowForm(true);
     setErrors({});
@@ -219,13 +258,46 @@ export default function AdminProductsPage() {
       image: "",
       stock: "",
     });
-    clearImagePreviews();
-    setImageFiles([]);
-    setImagePreviews([]);
+    setGalleryRows((prev) => {
+      revokeGalleryBlobs(prev);
+      return [];
+    });
     setEditingId(null);
     setShowForm(false);
     setErrors({});
     setError(null);
+  };
+
+  const appendGalleryFiles = (files) => {
+    if (!files.length) return;
+    setGalleryRows((prev) => [
+      ...prev,
+      ...files.map((file) => ({
+        id: newGalleryRowId(),
+        file,
+        preview: URL.createObjectURL(file),
+      })),
+    ]);
+  };
+
+  const removeGalleryRow = (index) => {
+    setGalleryRows((prev) => {
+      const row = prev[index];
+      if (row?.preview?.startsWith("blob:")) {
+        URL.revokeObjectURL(row.preview);
+      }
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
+  const moveGalleryRow = (from, to) => {
+    setGalleryRows((prev) => {
+      if (to < 0 || to >= prev.length) return prev;
+      const next = [...prev];
+      const [row] = next.splice(from, 1);
+      next.splice(to, 0, row);
+      return next;
+    });
   };
 
   if (loading) {
@@ -423,53 +495,96 @@ export default function AdminProductsPage() {
                 <label className="block text-sm font-medium text-brand-black/80">
                   Product Images
                 </label>
-                <div className="mt-1 grid gap-3 md:grid-cols-2">
-                  <div>
+                <div className="mt-2 space-y-4">
+                  <div className="flex flex-wrap items-center gap-3">
                     <input
                       type="file"
                       accept="image/*"
                       multiple
                       onChange={(e) => {
                         const files = Array.from(e.target.files || []);
-                        clearImagePreviews();
-                        setImageFiles(files);
-                        setImagePreviews(files.map((file) => URL.createObjectURL(file)));
+                        e.target.value = "";
+                        appendGalleryFiles(files);
                       }}
-                      className="block w-full rounded-lg border border-black/10 bg-white px-4 py-2 transition focus:border-brand-navy focus:outline-none"
+                      className="block w-full max-w-md rounded-lg border border-black/10 bg-white px-4 py-2 transition focus:border-brand-navy focus:outline-none md:w-auto md:flex-1"
                     />
-                    <p className="mt-1 text-xs text-brand-black/50">
-                      Upload one or more images for this product.
-                    </p>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    {imagePreviews.length ? (
-                      <div className="grid grid-cols-3 gap-2">
-                        {imagePreviews.map((preview, index) => (
-                          <img
-                            key={`${preview}-${index}`}
-                            src={preview}
-                            alt={`Product preview ${index + 1}`}
-                            className="h-20 w-20 rounded-lg border border-black/10 object-cover"
-                          />
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="h-20 w-20 rounded-lg border border-dashed border-black/20 bg-black/2" />
-                    )}
                     <button
                       type="button"
                       onClick={() => {
-                        clearImagePreviews();
-                        setImageFiles([]);
-                        setImagePreviews([]);
+                        setGalleryRows((prev) => {
+                          revokeGalleryBlobs(prev);
+                          return [];
+                        });
                         setFormData((prev) => ({ ...prev, image: "" }));
                       }}
                       className="rounded-lg border border-black/10 px-3 py-2 text-sm transition hover:bg-black/5"
                     >
-                      Clear
+                      Clear all
                     </button>
                   </div>
+                  <p className="text-xs text-brand-black/50">
+                    Add all images first, then use the arrows — order is saved as shown (first row is the main storefront and detail image).
+                  </p>
+
+                  {galleryRows.length === 0 ? (
+                    <div className="flex min-h-[4.5rem] items-center rounded-lg border border-dashed border-black/20 bg-black/[0.02] px-4 text-sm text-brand-black/45">
+                      No images yet — use the file picker above.
+                    </div>
+                  ) : (
+                    <ul className="space-y-3">
+                      {galleryRows.map((row, index) => (
+                        <li
+                          key={row.id}
+                          className="flex flex-wrap items-center gap-3 rounded-lg border border-black/10 bg-black/[0.02] p-3"
+                        >
+                          <span className="min-w-[5.5rem] text-xs font-semibold uppercase tracking-wide text-brand-navy">
+                            {imageGalleryOrderLabel(index)}
+                            {index === 0 ? (
+                              <span className="ml-1 font-normal normal-case text-brand-black/50">
+                                (main)
+                              </span>
+                            ) : null}
+                          </span>
+                          <img
+                            src={row.preview}
+                            alt=""
+                            className="h-16 w-16 shrink-0 rounded-lg border border-black/10 object-cover"
+                          />
+                          <div className="flex shrink-0 items-center gap-1">
+                            <button
+                              type="button"
+                              title="Move up"
+                              aria-label={`Move ${imageGalleryOrderLabel(index)} up`}
+                              disabled={index === 0}
+                              onClick={() => moveGalleryRow(index, index - 1)}
+                              className="rounded-md border border-black/10 p-1.5 text-brand-black transition hover:bg-black/5 disabled:pointer-events-none disabled:opacity-30"
+                            >
+                              <ChevronUp className="h-5 w-5" />
+                            </button>
+                            <button
+                              type="button"
+                              title="Move down"
+                              aria-label={`Move ${imageGalleryOrderLabel(index)} down`}
+                              disabled={index === galleryRows.length - 1}
+                              onClick={() => moveGalleryRow(index, index + 1)}
+                              className="rounded-md border border-black/10 p-1.5 text-brand-black transition hover:bg-black/5 disabled:pointer-events-none disabled:opacity-30"
+                            >
+                              <ChevronDown className="h-5 w-5" />
+                            </button>
+                            <button
+                              type="button"
+                              title="Remove image"
+                              aria-label="Remove image from list"
+                              onClick={() => removeGalleryRow(index)}
+                              className="rounded-md border border-black/10 p-1.5 text-red-600 transition hover:bg-red-50"
+                            >
+                              <Trash2 className="h-5 w-5" />
+                            </button>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               </div>
 

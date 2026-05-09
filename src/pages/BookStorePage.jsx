@@ -14,6 +14,13 @@ import Container from "../components/ui/Container";
 import { useCart } from "../hooks/useCart";
 import { productsService } from "../services/firebaseService";
 
+function productCoverImageUrl(product) {
+  const listed = Array.isArray(product?.images)
+    ? product.images.map((u) => String(u || "").trim()).filter(Boolean)
+    : [];
+  return listed[0] || product?.image || "";
+}
+
 const trustItems = [
   {
     title: "Secure Payment",
@@ -130,7 +137,9 @@ export default function BookStorePage() {
               </div>
             ) : (
               <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-                {filteredProducts.map((product) => (
+                {filteredProducts.map((product) => {
+                  const coverSrc = productCoverImageUrl(product);
+                  return (
                   <article
                     key={product.id}
                     role="button"
@@ -145,9 +154,9 @@ export default function BookStorePage() {
                     className="group relative cursor-pointer overflow-hidden rounded-2xl border border-black/10 bg-white/90 p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-soft"
                   >
                     <div className="mb-4 overflow-hidden rounded-xl border border-black/10 bg-black/[0.02]">
-                      {product.image ? (
+                      {coverSrc ? (
                         <img
-                          src={product.image}
+                          src={coverSrc}
                           alt={product.name}
                           className="h-44 w-full object-cover transition duration-300 group-hover:scale-[1.03]"
                           loading="lazy"
@@ -216,7 +225,8 @@ export default function BookStorePage() {
                       </Button>
                     </div>
                   </article>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
