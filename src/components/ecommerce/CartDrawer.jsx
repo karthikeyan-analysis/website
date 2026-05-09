@@ -156,7 +156,10 @@ export default function CartDrawer() {
             })
 
             // Best-effort email notification via backend Nodemailer endpoint.
-            await ordersService.sendOrderConfirmationEmail(orderRecord)
+            const emailResult = await ordersService.sendOrderConfirmationEmail(orderRecord)
+            if (emailResult?.emailSent === false) {
+              console.warn("Order confirmation email not sent:", emailResult)
+            }
 
             clearCart()
             setIsOpen(false)

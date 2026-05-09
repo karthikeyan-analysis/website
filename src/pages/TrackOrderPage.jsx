@@ -9,12 +9,13 @@ import { ordersService } from "../services/firebaseService";
 
 function formatDate(value) {
   if (!value) return "-";
-  const date =
-    typeof value === "string" || value instanceof Date
-      ? new Date(value)
-      : value?._seconds
-        ? new Date(value._seconds * 1000)
-        : null;
+  const date = (() => {
+    if (typeof value === "string" || value instanceof Date) return new Date(value);
+    if (typeof value?.toDate === "function") return value.toDate();
+    if (value?.seconds) return new Date(value.seconds * 1000);
+    if (value?._seconds) return new Date(value._seconds * 1000);
+    return null;
+  })();
   if (!date || Number.isNaN(date.getTime())) return "-";
   return date.toLocaleString();
 }
@@ -23,6 +24,27 @@ function formatMoney(value) {
   const n = Number(value || 0);
   if (!Number.isFinite(n)) return "0.00";
   return n.toFixed(2);
+}
+
+function getPlacedOnValue(order) {
+  return (
+    order?.createdAt ||
+    order?.orderDate ||
+    order?.placedAt ||
+    order?.updatedAt ||
+    null
+  );
+}
+
+function getStatusLabel(status) {
+  const normalized = String(status || "").trim().toLowerCase();
+  if (normalized === "completed") return "Delivered";
+  if (normalized === "paid") return "Paid";
+  if (normalized === "pending") return "Pending";
+  if (normalized === "shipped") return "Shipped";
+  if (normalized === "delivered") return "Delivered";
+  if (normalized === "cancelled") return "Cancelled";
+  return status || "Paid";
 }
 
 export default function TrackOrderPage() {
@@ -109,7 +131,7 @@ export default function TrackOrderPage() {
                   <div className="rounded-xl border border-black/10 p-4">
                     <p className="text-xs font-semibold text-brand-black/60">Status</p>
                     <p className="mt-1 text-lg font-bold text-brand-navy">
-                      {order.status || "Paid"}
+                      {getStatusLabel(order.status)}
                     </p>
                   </div>
                   <div className="rounded-xl border border-black/10 p-4">
@@ -130,7 +152,7 @@ export default function TrackOrderPage() {
                   <div className="rounded-xl border border-black/10 p-4">
                     <p className="text-xs font-semibold text-brand-black/60">Placed On</p>
                     <p className="mt-1 text-sm font-semibold text-brand-black">
-                      {formatDate(order.createdAt)}
+                      {formatDate(getPlacedOnValue(order))}
                     </p>
                   </div>
                 </div>

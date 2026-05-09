@@ -356,7 +356,13 @@ export const ordersService = {
       await updateDoc(ref, { ...statusData, updatedAt: new Date() });
       const snap = await getDoc(ref);
       const updatedOrder = snap.exists() ? { id: snap.id, ...snap.data() } : { id };
-      await ordersService.sendOrderStatusEmail(updatedOrder, statusData?.status);
+      const emailResult = await ordersService.sendOrderStatusEmail(
+        updatedOrder,
+        statusData?.status,
+      );
+      if (emailResult?.emailSent === false) {
+        console.warn("Order status email not sent:", emailResult);
+      }
       return updatedOrder;
     } catch (error) {
       console.error("Error updating order status:", error);

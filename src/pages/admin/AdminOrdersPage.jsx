@@ -41,6 +41,27 @@ function getAddressText(order) {
   return parts.length ? parts.join(", ") : "-";
 }
 
+function getPlacedOnValue(order) {
+  return (
+    order?.createdAt ||
+    order?.orderDate ||
+    order?.placedAt ||
+    order?.updatedAt ||
+    null
+  );
+}
+
+function getStatusLabel(status) {
+  const normalized = String(status || "").trim().toLowerCase();
+  if (normalized === "completed") return "Delivered";
+  if (normalized === "paid") return "Paid";
+  if (normalized === "pending") return "Pending";
+  if (normalized === "shipped") return "Shipped";
+  if (normalized === "delivered") return "Delivered";
+  if (normalized === "cancelled") return "Cancelled";
+  return status || "Paid";
+}
+
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -103,6 +124,19 @@ export default function AdminOrdersPage() {
     }
   };
 
+  const orderStats = orders.reduce(
+    (acc, order) => {
+      const status = String(order?.status || "").toLowerCase();
+      const total = Number(order?.total || 0);
+      acc.totalOrders += 1;
+      acc.revenue += Number.isFinite(total) ? total : 0;
+      if (status === "pending") acc.pending += 1;
+      if (status === "completed" || status === "delivered") acc.completed += 1;
+      return acc;
+    },
+    { totalOrders: 0, pending: 0, completed: 0, revenue: 0 },
+  );
+
   return (
     <AdminLayout>
       <div className="space-y-6">
@@ -111,6 +145,31 @@ export default function AdminOrdersPage() {
           <p className="text-gray-500 mt-1">
             Manage customer orders and payment details
           </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase text-gray-500">Total Orders</p>
+            <p className="mt-2 text-2xl font-bold text-gray-900">
+              {orderStats.totalOrders}
+            </p>
+          </div>
+          <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase text-yellow-700">Pending</p>
+            <p className="mt-2 text-2xl font-bold text-yellow-800">{orderStats.pending}</p>
+          </div>
+          <div className="rounded-xl border border-green-200 bg-green-50 p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase text-green-700">Completed</p>
+            <p className="mt-2 text-2xl font-bold text-green-800">
+              {orderStats.completed}
+            </p>
+          </div>
+          <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase text-blue-700">Revenue</p>
+            <p className="mt-2 text-2xl font-bold text-blue-800">
+              ₹{formatMoney(orderStats.revenue)}
+            </p>
+          </div>
         </div>
 
         <div className="bg-white rounded-xl shadow-md overflow-hidden">
@@ -172,11 +231,11 @@ export default function AdminOrdersPage() {
                         <span
                           className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(order.status)}`}
                         >
-                          {order.status || "Paid"}
+                          {getStatusLabel(order.status)}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600">
-                        {formatDate(order.createdAt)}
+                        {formatDate(getPlacedOnValue(order))}
                       </td>
                       <td className="px-6 py-4 text-center">
                         <button
@@ -241,7 +300,7 @@ export default function AdminOrdersPage() {
                 <div>
                   <p className="text-sm text-gray-500 font-semibold">DATE</p>
                   <p className="text-lg font-bold text-gray-900">
-                    {formatDate(selectedOrder.createdAt)}
+                    {formatDate(getPlacedOnValue(selectedOrder))}
                   </p>
                 </div>
                 <div>
@@ -321,7 +380,8 @@ export default function AdminOrdersPage() {
                   <option value="Paid">Paid</option>
                   <option value="Pending">Pending</option>
                   <option value="Shipped">Shipped</option>
-                  <option value="Completed">Completed</option>
+                  <option value="Delivered">Delivered</option>
+                  <option value="Completed">Completed (Legacy)</option>
                   <option value="Cancelled">Cancelled</option>
                 </select>
                 <p className="text-xs text-gray-500">
@@ -334,13 +394,13 @@ export default function AdminOrdersPage() {
                   onClick={() =>
                     handleStatusChange(
                       selectedOrder.id,
-                      selectedOrder.status === "Pending" ? "Completed" : "Completed",
+                      selectedOrder.status === "Pending" ? "Delivered" : "Delivered",
                     )
                   }
                   className="flex-1 flex items-center justify-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition font-semibold"
                 >
                   <CheckCircle className="h-5 w-5" />
-                  Mark Complete
+                  Mark Delivered
                 </button>
                 <button
                   onClick={() => handleDelete(selectedOrder.id)}

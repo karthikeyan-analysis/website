@@ -71,7 +71,7 @@ async function sendOrderConfirmation({
     </div>
   `;
 
-  await safeSendMail({
+  return safeSendMail({
     to: customerEmail,
     subject: `Order Confirmation - ${orderId}`,
     html: htmlContent,
@@ -113,7 +113,7 @@ async function sendAdminOrderNotification({
     </div>
   `;
 
-  await safeSendMail({
+  return safeSendMail({
     to: getAdminEmail(),
     subject: `New Order: ${orderId}`,
     html,
@@ -126,21 +126,28 @@ async function sendOrderStatusEmail({
   customerName,
   customerEmail,
   status,
+  total,
+  paymentId,
+  address,
 }) {
   const statusText = String(status || "Updated");
+  const totalValue = Number(total || 0);
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h2 style="color: #10197E;">Order Status Update</h2>
       <p>Dear ${escapeHtml(customerName || "Customer")},</p>
       <p>Your order <strong>${escapeHtml(orderId)}</strong> status is now:</p>
       <p style="font-size: 16px; font-weight: 700; color: #10197E;">${escapeHtml(statusText)}</p>
+      <p><strong>Total:</strong> ₹${escapeHtml(totalValue.toFixed(2))}</p>
+      ${paymentId ? `<p><strong>Payment ID:</strong> ${escapeHtml(paymentId)}</p>` : ""}
+      ${address ? `<p><strong>Delivery Address:</strong><br>${formatMultiline(address)}</p>` : ""}
       <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
       <p>Thank you for shopping with us.</p>
       <p>Best regards,<br>Karthikeyan Analysis Team</p>
     </div>
   `;
 
-  await safeSendMail({
+  return safeSendMail({
     to: customerEmail,
     subject: `Order ${orderId} • Status: ${statusText}`,
     html: htmlContent,
@@ -192,7 +199,7 @@ export default async function handler(req, res) {
           return res.status(400).json({ error: "Invalid order payload for email" });
         }
 
-        await Promise.all([
+        const [customerResult, adminResult] = await Promise.all([
           sendOrderConfirmation({
             orderId,
             customerName,
@@ -211,7 +218,12 @@ export default async function handler(req, res) {
           }),
         ]);
 
-        return res.status(200).json({ success: true, emailSent: true });
+        return res.status(200).json({
+          success: true,
+          emailSent: !customerResult?.skipped,
+          customerEmailResult: customerResult,
+          adminEmailResult: adminResult,
+        });
       }
 
       if (_action === "sendStatusEmail") {
@@ -220,18 +232,28 @@ export default async function handler(req, res) {
         const orderId = String(order.id || "").trim();
         const customerName = String(order.customerName || "").trim();
         const customerEmail = String(order.customerEmail || "").trim();
+        const address = String(order.address || "").trim();
+        const paymentId = String(order.razorpay_payment_id || "").trim();
+        const total = Number(order.total || 0);
 
         if (!orderId || !customerEmail) {
           return res.status(400).json({ error: "Invalid status email payload" });
         }
 
-        await sendOrderStatusEmail({
+        const result = await sendOrderStatusEmail({
           orderId,
           customerName,
           customerEmail,
           status,
+          total,
+          paymentId,
+          address,
         });
-        return res.status(200).json({ success: true, emailSent: true });
+        return res.status(200).json({
+          success: true,
+          emailSent: !result?.skipped,
+          customerEmailResult: result,
+        });
       }
 
       // Create order
@@ -262,7 +284,7 @@ export default async function handler(req, res) {
       await ordersCollection().doc(orderId).set(newOrder);
 
       // Send order confirmation email (optional - will skip if not configured)
-      await Promise.all([
+      const [customerResult, adminResult] = await Promise.all([
         sendOrderConfirmation({
           orderId,
           customerName,
@@ -284,6 +306,9 @@ export default async function handler(req, res) {
       res.status(201).json({
         success: true,
         orderId,
+        emailSent: !customerResult?.skipped,
+        customerEmailResult: customerResult,
+        adminEmailResult: adminResult,
         message: "Order created successfully",
       });
     } else {
