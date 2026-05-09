@@ -8,8 +8,10 @@ import {
 import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import PageLayout from "../components/layout/PageLayout";
+import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
 import Container from "../components/ui/Container";
+import { useCart } from "../hooks/useCart";
 import { productsService } from "../services/firebaseService";
 
 const trustItems = [
@@ -36,6 +38,7 @@ export default function BookStorePage() {
   const [loading, setLoading] = useState(true);
   const [productCategories, setProductCategories] = useState([]);
   const navigate = useNavigate();
+  const { addToCart } = useCart();
 
   useEffect(() => {
     const loadProducts = async () => {
@@ -198,6 +201,20 @@ export default function BookStorePage() {
                     <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-brand-navy/70">
                       Tap to view details
                     </p>
+
+                    <div className="mt-4">
+                      <Button
+                        type="button"
+                        className="w-full"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          addToCart(product);
+                        }}
+                      >
+                        Add to Cart
+                      </Button>
+                    </div>
                   </article>
                 ))}
               </div>

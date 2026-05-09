@@ -4,6 +4,12 @@ import { useCart } from '../../hooks/useCart'
 import { useMemo, useState } from 'react'
 import { paymentsService } from '../../services/firebaseService'
 
+function formatMoney(value) {
+  const n = Number(value || 0)
+  if (!Number.isFinite(n)) return '0.00'
+  return n.toFixed(2)
+}
+
 export default function CartDrawer() {
   const { items, isOpen, setIsOpen, subtotal, updateQty, clearCart } = useCart()
   const [step, setStep] = useState('cart') // cart | checkout | success
@@ -128,14 +134,49 @@ export default function CartDrawer() {
                 <p className="rounded-xl bg-black/[0.02] p-4 text-sm text-brand-black/70">Your cart is empty.</p>
               ) : (
                 items.map((item) => (
-                  <article key={item.id} className="rounded-xl border border-black/10 p-4">
-                    <p className="text-sm font-semibold text-brand-navy">{item.name}</p>
-                    <div className="mt-3 flex items-center justify-between">
-                      <p className="text-sm text-brand-black/70">Rs. {item.price} x {item.qty}</p>
-                      <div className="flex items-center gap-2">
-                        <button type="button" onClick={() => updateQty(item.id, -1)} className="inline-flex min-h-9 min-w-9 touch-manipulation items-center justify-center rounded-md border border-black/15 hover:bg-black/[0.03]" aria-label="Decrease quantity"><Minus className="h-4 w-4" /></button>
-                        <span className="w-6 text-center text-sm font-semibold">{item.qty}</span>
-                        <button type="button" onClick={() => updateQty(item.id, 1)} className="inline-flex min-h-9 min-w-9 touch-manipulation items-center justify-center rounded-md border border-black/15 hover:bg-black/[0.03]" aria-label="Increase quantity"><Plus className="h-4 w-4" /></button>
+                  <article key={item.id} className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
+                    <div className="flex gap-3">
+                      <div className="h-16 w-16 overflow-hidden rounded-xl border border-black/10 bg-black/[0.02]">
+                        {item.image ? (
+                          <img src={item.image} alt={item.name} className="h-full w-full object-cover" loading="lazy" />
+                        ) : (
+                          <div className="grid h-full w-full place-items-center text-[10px] font-semibold text-brand-black/40">
+                            No image
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-brand-navy">{item.name}</p>
+                        <p className="mt-1 text-xs text-brand-black/60">
+                          Rs. {formatMoney(item.price)} • Qty {item.qty}
+                        </p>
+
+                        <div className="mt-3 flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => updateQty(item.id, -1)}
+                              className="inline-flex size-9 touch-manipulation items-center justify-center rounded-lg border border-black/10 bg-white text-brand-navy shadow-sm transition hover:bg-black/[0.03]"
+                              aria-label="Decrease quantity"
+                            >
+                              <Minus className="h-4 w-4" />
+                            </button>
+                            <span className="w-7 text-center text-sm font-bold text-brand-navy">{item.qty}</span>
+                            <button
+                              type="button"
+                              onClick={() => updateQty(item.id, 1)}
+                              className="inline-flex size-9 touch-manipulation items-center justify-center rounded-lg border border-black/10 bg-white text-brand-navy shadow-sm transition hover:bg-black/[0.03]"
+                              aria-label="Increase quantity"
+                            >
+                              <Plus className="h-4 w-4" />
+                            </button>
+                          </div>
+
+                          <p className="text-sm font-bold text-brand-navy">
+                            Rs. {formatMoney(Number(item.price) * Number(item.qty || 0))}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </article>
@@ -176,14 +217,14 @@ export default function CartDrawer() {
         <div className="mt-4 shrink-0 rounded-xl bg-black/[0.02] p-4 pt-3 sm:mt-6">
           <div className="flex items-center justify-between text-sm">
             <span className="text-brand-black/70">Subtotal</span>
-            <span className="font-semibold text-brand-navy">Rs. {subtotal}</span>
+            <span className="font-semibold text-brand-navy">Rs. {formatMoney(subtotal)}</span>
           </div>
           {step === 'cart' ? (
             <button
               type="button"
               disabled={!canCheckout}
               onClick={() => setStep('checkout')}
-              className="mt-3 flex min-h-12 w-full touch-manipulation items-center justify-center rounded-xl bg-brand-navy px-4 text-sm font-bold text-white hover:bg-brand-navy-light disabled:opacity-50 sm:mt-4"
+              className="mt-3 flex min-h-12 w-full touch-manipulation items-center justify-center rounded-xl bg-brand-navy px-4 text-sm font-bold text-white shadow-card ring-1 ring-brand-navy/10 hover:bg-brand-navy-light disabled:opacity-50 sm:mt-4"
             >
               Proceed to Checkout
             </button>
@@ -198,7 +239,7 @@ export default function CartDrawer() {
                 onClick={openPayment}
                 className="flex min-h-12 w-full items-center justify-center rounded-xl bg-brand-navy px-4 text-sm font-bold text-white hover:bg-brand-navy-light disabled:opacity-50"
               >
-                {loading ? 'Starting…' : `Pay Rs. ${subtotal}`}
+                {loading ? 'Starting…' : `Pay Rs. ${formatMoney(subtotal)}`}
               </button>
             </div>
           ) : (
