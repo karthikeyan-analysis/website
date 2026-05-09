@@ -51,19 +51,34 @@ export const productsService = {
 
   async getProducts() {
     try {
-      return await productsAPI.getAll();
+      const q = query(collection(db, "products"), orderBy("createdAt", "desc"));
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
     } catch (error) {
-      console.error("Error fetching products:", error);
-      throw error;
+      // Fallback to API if Firestore rules block direct client reads.
+      try {
+        return await productsAPI.getAll();
+      } catch (apiError) {
+        console.error("Error fetching products:", apiError);
+        throw apiError;
+      }
     }
   },
 
   async getProductById(productId) {
     try {
-      return await productsAPI.getById(productId);
+      const ref = doc(db, "products", String(productId));
+      const snap = await getDoc(ref);
+      if (!snap.exists()) return null;
+      return { id: snap.id, ...snap.data() };
     } catch (error) {
-      console.error("Error fetching product:", error);
-      throw error;
+      // Fallback to API if Firestore rules block direct client reads.
+      try {
+        return await productsAPI.getById(productId);
+      } catch (apiError) {
+        console.error("Error fetching product:", apiError);
+        throw apiError;
+      }
     }
   },
 
