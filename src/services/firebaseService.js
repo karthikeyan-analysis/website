@@ -216,10 +216,17 @@ export const contactsService = {
 export const categoriesService = {
   async getCategories() {
     try {
-      return await categoriesAPI.getAll();
+      const q = query(collection(db, "categories"), orderBy("name", "asc"));
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
     } catch (error) {
-      console.error("Error fetching categories:", error);
-      throw error;
+      // Fallback to API if Firestore rules block direct client reads.
+      try {
+        return await categoriesAPI.getAll();
+      } catch (apiError) {
+        console.error("Error fetching categories:", apiError);
+        throw apiError;
+      }
     }
   },
 
@@ -242,37 +249,78 @@ export const categoriesService = {
 
   async getCategoryById(id) {
     try {
-      return await categoriesAPI.getById(id);
+      const ref = doc(db, "categories", String(id));
+      const snap = await getDoc(ref);
+      if (!snap.exists()) return null;
+      return { id: snap.id, ...snap.data() };
     } catch (error) {
-      console.error("Error fetching category:", error);
-      throw error;
+      // Fallback to API.
+      try {
+        return await categoriesAPI.getById(id);
+      } catch (apiError) {
+        console.error("Error fetching category:", apiError);
+        throw apiError;
+      }
     }
   },
 
   async addCategory(categoryData) {
     try {
-      return await categoriesAPI.create(categoryData);
+      const now = new Date();
+      const payload = {
+        name: String(categoryData?.name || "").trim(),
+        description: String(categoryData?.description || "").trim(),
+        image: String(categoryData?.image || "").trim(),
+        createdAt: now,
+        updatedAt: now,
+      };
+      if (!payload.name) throw new Error("Category name is required");
+      const docRef = await addDoc(collection(db, "categories"), payload);
+      return { id: docRef.id, ...payload };
     } catch (error) {
-      console.error("Error adding category:", error);
-      throw error;
+      // Fallback to API.
+      try {
+        return await categoriesAPI.create(categoryData);
+      } catch (apiError) {
+        console.error("Error adding category:", apiError);
+        throw apiError;
+      }
     }
   },
 
   async updateCategory(id, categoryData) {
     try {
-      return await categoriesAPI.update(id, categoryData);
+      const ref = doc(db, "categories", String(id));
+      const update = {
+        ...categoryData,
+        updatedAt: new Date(),
+      };
+      await updateDoc(ref, update);
+      const snap = await getDoc(ref);
+      return snap.exists() ? { id: snap.id, ...snap.data() } : { id, ...update };
     } catch (error) {
-      console.error("Error updating category:", error);
-      throw error;
+      // Fallback to API.
+      try {
+        return await categoriesAPI.update(id, categoryData);
+      } catch (apiError) {
+        console.error("Error updating category:", apiError);
+        throw apiError;
+      }
     }
   },
 
   async deleteCategory(id) {
     try {
-      return await categoriesAPI.delete(id);
+      await deleteDoc(doc(db, "categories", String(id)));
+      return true;
     } catch (error) {
-      console.error("Error deleting category:", error);
-      throw error;
+      // Fallback to API.
+      try {
+        return await categoriesAPI.delete(id);
+      } catch (apiError) {
+        console.error("Error deleting category:", apiError);
+        throw apiError;
+      }
     }
   },
 };
