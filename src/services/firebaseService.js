@@ -19,7 +19,7 @@ import {
   deleteObject,
 } from "firebase/storage";
 import { db, storage } from "../config/firebase";
-import { categoriesAPI, contactsAPI, ordersAPI, paymentsAPI } from "./api";
+import { contactsAPI, paymentsAPI } from "./api";
 
 // Products Service
 export const productsService = {
@@ -167,13 +167,8 @@ export const contactsService = {
       const querySnapshot = await getDocs(q);
       return querySnapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
     } catch (error) {
-      // Fallback to API if Firestore rules block direct client reads.
-      try {
-        return await contactsAPI.getAll();
-      } catch (apiError) {
-        console.error("Error fetching contacts:", apiError);
-        throw apiError;
-      }
+      console.error("Error fetching contacts:", error);
+      throw error;
     }
   },
 
@@ -187,14 +182,8 @@ export const contactsService = {
       });
       return { id: contactId, ...data, read: true };
     } catch (error) {
-      // Fallback to API.
-      try {
-        await contactsAPI.markAsRead(contactId);
-        return { id: contactId, ...data, read: true };
-      } catch (apiError) {
-        console.error("Error updating contact:", apiError);
-        throw apiError;
-      }
+      console.error("Error updating contact:", error);
+      throw error;
     }
   },
 
@@ -203,14 +192,8 @@ export const contactsService = {
       await deleteDoc(doc(db, "contacts", String(contactId)));
       return true;
     } catch (error) {
-      // Fallback to API.
-      try {
-        await contactsAPI.delete(contactId);
-        return true;
-      } catch (apiError) {
-        console.error("Error deleting contact:", apiError);
-        throw apiError;
-      }
+      console.error("Error deleting contact:", error);
+      throw error;
     }
   },
 };
@@ -223,13 +206,8 @@ export const categoriesService = {
       const querySnapshot = await getDocs(q);
       return querySnapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
     } catch (error) {
-      // Fallback to API if Firestore rules block direct client reads.
-      try {
-        return await categoriesAPI.getAll();
-      } catch (apiError) {
-        console.error("Error fetching categories:", apiError);
-        throw apiError;
-      }
+      console.error("Error fetching categories:", error);
+      throw error;
     }
   },
 
@@ -257,13 +235,8 @@ export const categoriesService = {
       if (!snap.exists()) return null;
       return { id: snap.id, ...snap.data() };
     } catch (error) {
-      // Fallback to API.
-      try {
-        return await categoriesAPI.getById(id);
-      } catch (apiError) {
-        console.error("Error fetching category:", apiError);
-        throw apiError;
-      }
+      console.error("Error fetching category:", error);
+      throw error;
     }
   },
 
@@ -281,13 +254,8 @@ export const categoriesService = {
       const docRef = await addDoc(collection(db, "categories"), payload);
       return { id: docRef.id, ...payload };
     } catch (error) {
-      // Fallback to API.
-      try {
-        return await categoriesAPI.create(categoryData);
-      } catch (apiError) {
-        console.error("Error adding category:", apiError);
-        throw apiError;
-      }
+      console.error("Error adding category:", error);
+      throw error;
     }
   },
 
@@ -302,13 +270,8 @@ export const categoriesService = {
       const snap = await getDoc(ref);
       return snap.exists() ? { id: snap.id, ...snap.data() } : { id, ...update };
     } catch (error) {
-      // Fallback to API.
-      try {
-        return await categoriesAPI.update(id, categoryData);
-      } catch (apiError) {
-        console.error("Error updating category:", apiError);
-        throw apiError;
-      }
+      console.error("Error updating category:", error);
+      throw error;
     }
   },
 
@@ -317,13 +280,8 @@ export const categoriesService = {
       await deleteDoc(doc(db, "categories", String(id)));
       return true;
     } catch (error) {
-      // Fallback to API.
-      try {
-        return await categoriesAPI.delete(id);
-      } catch (apiError) {
-        console.error("Error deleting category:", apiError);
-        throw apiError;
-      }
+      console.error("Error deleting category:", error);
+      throw error;
     }
   },
 };
@@ -332,7 +290,19 @@ export const categoriesService = {
 export const ordersService = {
   async createOrder(orderData) {
     try {
-      return await ordersAPI.create(orderData);
+      const now = new Date();
+      const orderId = String(orderData?.id || `ORD-${Date.now()}`);
+      const payload = {
+        ...orderData,
+        id: orderId,
+        status: String(orderData?.status || "Paid"),
+        createdAt: orderData?.createdAt || now,
+        updatedAt: now,
+      };
+
+      const ref = doc(db, "orders", orderId);
+      await setDoc(ref, payload, { merge: true });
+      return payload;
     } catch (error) {
       console.error("Error creating order:", error);
       throw error;
@@ -345,13 +315,8 @@ export const ordersService = {
       const querySnapshot = await getDocs(q);
       return querySnapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
     } catch (error) {
-      // Fallback to API if Firestore rules block direct client reads.
-      try {
-        return await ordersAPI.getAll();
-      } catch (apiError) {
-        console.error("Error fetching orders:", apiError);
-        throw apiError;
-      }
+      console.error("Error fetching orders:", error);
+      throw error;
     }
   },
 
@@ -362,13 +327,8 @@ export const ordersService = {
       if (!snap.exists()) return null;
       return { id: snap.id, ...snap.data() };
     } catch (error) {
-      // Fallback to API.
-      try {
-        return await ordersAPI.getById(id);
-      } catch (apiError) {
-        console.error("Error fetching order:", apiError);
-        throw apiError;
-      }
+      console.error("Error fetching order:", error);
+      throw error;
     }
   },
 
@@ -379,13 +339,8 @@ export const ordersService = {
       const snap = await getDoc(ref);
       return snap.exists() ? { id: snap.id, ...snap.data() } : { id };
     } catch (error) {
-      // Fallback to API.
-      try {
-        return await ordersAPI.updateStatus(id, statusData);
-      } catch (apiError) {
-        console.error("Error updating order status:", apiError);
-        throw apiError;
-      }
+      console.error("Error updating order status:", error);
+      throw error;
     }
   },
 
@@ -394,13 +349,8 @@ export const ordersService = {
       await deleteDoc(doc(db, "orders", String(id)));
       return true;
     } catch (error) {
-      // Fallback to API.
-      try {
-        return await ordersAPI.delete(id);
-      } catch (apiError) {
-        console.error("Error deleting order:", apiError);
-        throw apiError;
-      }
+      console.error("Error deleting order:", error);
+      throw error;
     }
   },
 };

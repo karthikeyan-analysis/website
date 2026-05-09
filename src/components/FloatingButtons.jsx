@@ -39,6 +39,7 @@ export default function FloatingButtons() {
   const pathname = location.pathname || "";
   const isShopRoute =
     pathname.startsWith("/book-store") || pathname.startsWith("/shop");
+  const isAdminRoute = pathname.startsWith("/admin");
 
   useEffect(() => {
     try {
@@ -64,7 +65,7 @@ export default function FloatingButtons() {
 
   return (
     <>
-      {isShopRoute ? null : (
+      {isShopRoute || isAdminRoute ? null : (
         <div
           className="floating-buttons pointer-events-none opacity-100 transition-opacity duration-200"
           style={{

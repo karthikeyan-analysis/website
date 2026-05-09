@@ -2,7 +2,8 @@ import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/re
 import { Minus, Plus, ShoppingBag, X } from 'lucide-react'
 import { useCart } from '../../hooks/useCart'
 import { useMemo, useState } from 'react'
-import { paymentsService } from '../../services/firebaseService'
+import { useNavigate } from 'react-router-dom'
+import { ordersService, paymentsService } from '../../services/firebaseService'
 
 function formatMoney(value) {
   const n = Number(value || 0)
@@ -12,6 +13,7 @@ function formatMoney(value) {
 
 export default function CartDrawer() {
   const { items, isOpen, setIsOpen, subtotal, updateQty, clearCart } = useCart()
+  const navigate = useNavigate()
   const [step, setStep] = useState('cart') // cart | checkout | success
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -53,11 +55,42 @@ export default function CartDrawer() {
 
   const canCheckout = items.length > 0 && amount > 0
 
+  const formatAddressForStorage = () => {
+    const parts = [
+      customer.addressLine1,
+      customer.addressLine2,
+      customer.area,
+      customer.city,
+      customer.state,
+      customer.pincode ? `Pincode: ${customer.pincode}` : '',
+      customer.landmark ? `Landmark: ${customer.landmark}` : '',
+      customer.altPhone ? `Alt phone: ${customer.altPhone}` : '',
+    ]
+      .map((s) => String(s || '').trim())
+      .filter(Boolean)
+    return parts.join(', ')
+  }
+
+  const validateCheckout = () => {
+    if (!customer.name.trim()) return 'Full name is required.'
+    if (!customer.email.trim()) return 'Email is required.'
+    if (!customer.phone.trim()) return 'Phone number is required.'
+    if (!customer.addressLine1.trim()) return 'Address line 1 is required.'
+    if (!customer.area.trim()) return 'Area / Locality is required.'
+    if (!customer.city.trim()) return 'City is required.'
+    if (!customer.state.trim()) return 'State is required.'
+    if (!customer.pincode.trim()) return 'Pincode is required.'
+    return ''
+  }
+
   const openPayment = async () => {
     setError('')
     setLoading(true)
 
     try {
+      const validationError = validateCheckout()
+      if (validationError) throw new Error(validationError)
+
       const ok = await loadRazorpayScript()
       if (!ok) throw new Error('Failed to load payment gateway. Please try again.')
 
@@ -82,50 +115,52 @@ export default function CartDrawer() {
           contact: customer.phone,
         },
         notes: {
-          address: [
-            customer.addressLine1,
-            customer.addressLine2,
-            customer.area,
-            customer.city,
-            customer.state,
-            customer.pincode ? `Pincode: ${customer.pincode}` : '',
-            customer.landmark ? `Landmark: ${customer.landmark}` : '',
-            customer.altPhone ? `Alt phone: ${customer.altPhone}` : '',
-          ]
-            .map((s) => String(s || '').trim())
-            .filter(Boolean)
-            .join(', '),
+          address: formatAddressForStorage(),
         },
         handler: async (response) => {
           try {
             setLoading(true)
-            await paymentsService.verifyRazorpayPayment({
-              ...response,
-              customer: {
-                name: customer.name,
-                email: customer.email,
-                phone: customer.phone,
+
+            const orderId = `KA-${Date.now()}`
+            const orderRecord = await ordersService.createOrder({
+              id: orderId,
+              provider: 'razorpay',
+              razorpay_order_id: response?.razorpay_order_id || orderRes?.order?.id || '',
+              razorpay_payment_id: response?.razorpay_payment_id || '',
+              razorpay_signature: response?.razorpay_signature || '',
+              customerName: customer.name.trim(),
+              customerEmail: customer.email.trim().toLowerCase(),
+              customerPhone: customer.phone.trim(),
+              customerAltPhone: customer.altPhone.trim(),
+              items: items.map((i) => ({
+                id: i.id,
+                name: i.name,
+                image: i.image || '',
+                qty: Number(i.qty || 0),
+                price: Number(i.price || 0),
+              })),
+              total: Number(amount),
+              address: formatAddressForStorage(),
+              shippingAddress: {
+                addressLine1: customer.addressLine1.trim(),
+                addressLine2: customer.addressLine2.trim(),
+                area: customer.area.trim(),
+                city: customer.city.trim(),
+                state: customer.state.trim(),
+                pincode: customer.pincode.trim(),
+                landmark: customer.landmark.trim(),
+                altPhone: customer.altPhone.trim(),
               },
-              address: [
-                customer.addressLine1,
-                customer.addressLine2,
-                customer.area,
-                customer.city,
-                customer.state,
-                customer.pincode ? `Pincode: ${customer.pincode}` : '',
-                customer.landmark ? `Landmark: ${customer.landmark}` : '',
-                customer.altPhone ? `Alt phone: ${customer.altPhone}` : '',
-              ]
-                .map((s) => String(s || '').trim())
-                .filter(Boolean)
-                .join(', '),
-              cart: items.map((i) => ({ name: i.name, quantity: i.qty, price: i.price })),
-              total: amount,
+              status: 'Paid',
+              paymentStatus: 'Success',
             })
+
             clearCart()
-            setStep('success')
+            setIsOpen(false)
+            setStep('cart')
+            navigate(`/order-placed/${orderRecord.id}`)
           } catch (e) {
-            setError(e?.message || 'Payment verification failed. Please contact support.')
+            setError(e?.message || 'Payment completed, but order save failed. Please contact support.')
             setStep('checkout')
           } finally {
             setLoading(false)
@@ -308,7 +343,7 @@ export default function CartDrawer() {
               </button>
               <button
                 type="button"
-                disabled={loading || !canCheckout || !customer.name || !customer.email || !customer.phone}
+                disabled={loading || !canCheckout}
                 onClick={openPayment}
                 className="flex min-h-12 w-full items-center justify-center rounded-xl bg-brand-navy px-4 text-sm font-bold text-white hover:bg-brand-navy-light disabled:opacity-50"
               >
