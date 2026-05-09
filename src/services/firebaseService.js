@@ -69,7 +69,13 @@ export const productsService = {
 
   async getProductReviews(productId) {
     try {
-      return await productsAPI.getReviews(productId);
+      const q = query(
+        collection(db, "productReviews"),
+        where("productId", "==", String(productId)),
+        orderBy("createdAt", "desc"),
+      );
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
     } catch (error) {
       console.error("Error fetching product reviews:", error);
       throw error;
@@ -78,7 +84,28 @@ export const productsService = {
 
   async addProductReview(payload) {
     try {
-      return await productsAPI.addReview(payload);
+      const data = {
+        productId: String(payload?.productId || "").trim(),
+        productName: String(payload?.productName || "").trim(),
+        name: String(payload?.name || "").trim(),
+        email: String(payload?.email || "")
+          .trim()
+          .toLowerCase(),
+        rating: Number(payload?.rating || 0),
+        review: String(payload?.review || "").trim(),
+        createdAt: new Date(),
+      };
+
+      if (!data.productId) throw new Error("productId is required");
+      if (!data.name) throw new Error("Name is required");
+      if (!data.email) throw new Error("Email is required");
+      if (!Number.isInteger(data.rating) || data.rating < 1 || data.rating > 5) {
+        throw new Error("Rating must be between 1 and 5");
+      }
+      if (!data.review) throw new Error("Review is required");
+
+      const docRef = await addDoc(collection(db, "productReviews"), data);
+      return { id: docRef.id, ...data };
     } catch (error) {
       console.error("Error adding product review:", error);
       throw error;

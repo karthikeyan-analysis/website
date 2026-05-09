@@ -3,8 +3,8 @@ import {
   formatMultiline,
   getAdminEmail,
   safeSendMail,
-} from "../_lib/mailer.js";
-import { getAdminDb } from "../_lib/firebaseAdmin.js";
+} from "../../server/mailer.js";
+import { getAdminDb } from "../../server/firebaseAdmin.js";
 
 async function sendContactConfirmation({
   name,

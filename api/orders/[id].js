@@ -1,5 +1,5 @@
-import { escapeHtml, getAdminEmail, safeSendMail } from "../_lib/mailer.js";
-import { getAdminDb } from "../_lib/firebaseAdmin.js";
+import { escapeHtml, getAdminEmail, safeSendMail } from "../../server/mailer.js";
+import { getAdminDb } from "../../server/firebaseAdmin.js";
 
 async function sendOrderStatusEmail(
   status,

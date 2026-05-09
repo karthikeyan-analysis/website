@@ -39,8 +39,7 @@ export function isEmailConfigured() {
 
 function getNormalizedPassword() {
   // Google App Passwords are often copied with spaces; SMTP auth requires no spaces.
-  return stripWrappingQuotes(process.env.EMAIL_PASSWORD || "")
-    .replace(/\s+/g, "");
+  return stripWrappingQuotes(process.env.EMAIL_PASSWORD || "").replace(/\s+/g, "");
 }
 
 function getNormalizedUser() {
@@ -101,4 +100,3 @@ export function escapeHtml(str) {
 export function formatMultiline(text) {
   return escapeHtml(normalizeNewlines(text)).replace(/\n/g, "<br>");
 }
-

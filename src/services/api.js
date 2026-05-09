@@ -163,18 +163,6 @@ export const productsAPI = {
       method: "DELETE",
     });
   },
-
-  async getReviews(productId) {
-    const qp = new URLSearchParams({ productId: String(productId) }).toString();
-    return apiCall(`/product-reviews?${qp}`);
-  },
-
-  async addReview(payload) {
-    return apiCall("/product-reviews", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
-  },
 };
 
 // Payments API (Razorpay)

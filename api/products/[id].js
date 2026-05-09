@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-import { getAdminDb } from "../_lib/firebaseAdmin.js";
+import { getAdminDb } from "../../server/firebaseAdmin.js";
 
 dotenv.config();
 

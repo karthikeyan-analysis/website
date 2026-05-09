@@ -69,4 +69,3 @@ export function getAdminDb() {
   getAdminApp();
   return admin.firestore();
 }
-
