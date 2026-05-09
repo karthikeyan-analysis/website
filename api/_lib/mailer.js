@@ -4,16 +4,33 @@ function normalizeNewlines(value) {
   return String(value ?? "").replace(/\r\n/g, "\n");
 }
 
+function stripWrappingQuotes(value) {
+  return String(value ?? "")
+    .trim()
+    .replace(/^["']|["']$/g, "");
+}
+
 export function getAdminEmail() {
-  return process.env.ADMIN_EMAIL || "karthikeyananalysisstudycircle@gmail.com";
+  return (
+    stripWrappingQuotes(process.env.ADMIN_EMAIL) ||
+    "karthikeyananalysisstudycircle@gmail.com"
+  );
 }
 
 export function getFromEmail() {
-  return process.env.EMAIL_FROM || process.env.EMAIL_USER || undefined;
+  return (
+    stripWrappingQuotes(process.env.EMAIL_FROM) ||
+    stripWrappingQuotes(process.env.EMAIL_USER) ||
+    undefined
+  );
 }
 
 export function getReplyToEmail() {
-  return process.env.EMAIL_REPLY_TO || process.env.EMAIL_USER || undefined;
+  return (
+    stripWrappingQuotes(process.env.EMAIL_REPLY_TO) ||
+    stripWrappingQuotes(process.env.EMAIL_USER) ||
+    undefined
+  );
 }
 
 export function isEmailConfigured() {
@@ -22,16 +39,19 @@ export function isEmailConfigured() {
 
 function getNormalizedPassword() {
   // Google App Passwords are often copied with spaces; SMTP auth requires no spaces.
-  return String(process.env.EMAIL_PASSWORD || "")
-    .trim()
+  return stripWrappingQuotes(process.env.EMAIL_PASSWORD || "")
     .replace(/\s+/g, "");
+}
+
+function getNormalizedUser() {
+  return stripWrappingQuotes(process.env.EMAIL_USER || "");
 }
 
 export function getTransporter() {
   if (!isEmailConfigured()) return null;
 
   // Cache across invocations when possible (warm lambda)
-  const cacheKey = `${process.env.EMAIL_USER || ""}:${getNormalizedPassword()}`;
+  const cacheKey = `${getNormalizedUser()}:${getNormalizedPassword()}`;
   if (globalThis.__ka_mailer && globalThis.__ka_mailer_key === cacheKey) {
     return globalThis.__ka_mailer;
   }
@@ -41,7 +61,7 @@ export function getTransporter() {
     port: 465,
     secure: true,
     auth: {
-      user: process.env.EMAIL_USER,
+      user: getNormalizedUser(),
       pass: getNormalizedPassword(),
     },
   });
