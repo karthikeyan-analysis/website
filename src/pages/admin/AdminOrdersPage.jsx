@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import AdminLayout from "../../components/admin/AdminLayout";
-import { Eye, Trash2, CheckCircle, Download } from "lucide-react";
+import { Eye, Trash2, CheckCircle, Download, Copy } from "lucide-react";
 import * as XLSX from "xlsx";
 import { ordersService } from "../../services/firebaseService";
 
@@ -42,6 +42,30 @@ function getAddressText(order) {
   return parts.length ? parts.join(", ") : "-";
 }
 
+function getAddressLines(order) {
+  const shipping = order?.shippingAddress;
+  if (shipping && typeof shipping === "object") {
+    const cityState = [shipping.city, shipping.state].filter(Boolean).join(", ");
+    return [
+      shipping.addressLine1,
+      shipping.addressLine2,
+      shipping.area,
+      cityState,
+      shipping.pincode ? `Pincode: ${shipping.pincode}` : "",
+      shipping.landmark ? `Landmark: ${shipping.landmark}` : "",
+      shipping.altPhone ? `Alternate phone: ${shipping.altPhone}` : "",
+    ].filter(Boolean);
+  }
+
+  const flat = String(order?.address || "").trim();
+  if (!flat) return ["-"];
+  return [flat];
+}
+
+function getAddressClipboardText(order) {
+  return getAddressLines(order).join("\n");
+}
+
 function getPlacedOnValue(order) {
   return (
     order?.createdAt ||
@@ -78,7 +102,9 @@ function summarizeLineItems(order) {
 }
 
 function normalizeOrderStatus(order) {
-  return String(order?.status ?? "Paid").trim().toLowerCase();
+  const normalized = String(order?.status ?? "paid").trim().toLowerCase();
+  if (normalized === "cancelled") return "cancelled_waiting_refund";
+  return normalized;
 }
 
 function startOfDayMs(isoDateStr) {
@@ -135,12 +161,12 @@ function buildDailySummaryRows(orders) {
 
 function getStatusLabel(status) {
   const normalized = String(status || "").trim().toLowerCase();
-  if (normalized === "completed") return "Delivered";
   if (normalized === "paid") return "Paid";
   if (normalized === "pending") return "Pending";
   if (normalized === "shipped") return "Shipped";
-  if (normalized === "delivered") return "Delivered";
-  if (normalized === "cancelled") return "Cancelled";
+  if (normalized === "cancelled_waiting_refund") return "Cancelled (Waiting to be refunded)";
+  if (normalized === "cancelled_refunded") return "Cancelled and Refunded";
+  if (normalized === "cancelled") return "Cancelled (Waiting to be refunded)";
   return status || "Paid";
 }
 
@@ -149,6 +175,7 @@ export default function AdminOrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [copiedAddressOrderId, setCopiedAddressOrderId] = useState("");
   const [exportFromDate, setExportFromDate] = useState("");
   const [exportToDate, setExportToDate] = useState("");
   const [exportStatus, setExportStatus] = useState("all");
@@ -192,18 +219,44 @@ export default function AdminOrdersPage() {
     }
   };
 
+  const handleCopyAddress = async (order) => {
+    const text = getAddressClipboardText(order);
+    if (!text || text === "-") return;
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+      }
+      setCopiedAddressOrderId(String(order?.id || ""));
+      setTimeout(() => setCopiedAddressOrderId(""), 1800);
+    } catch (error) {
+      console.error("Failed to copy address:", error);
+      window.alert("Could not copy address. Please copy manually.");
+    }
+  };
+
   const getStatusColor = (status) => {
     switch (String(status || "").toLowerCase()) {
-      case "completed":
       case "paid":
-      case "delivered":
         return "bg-green-100 text-green-700";
       case "pending":
         return "bg-yellow-100 text-yellow-700";
       case "shipped":
         return "bg-blue-100 text-blue-700";
+      case "cancelled_waiting_refund":
       case "cancelled":
         return "bg-red-100 text-red-700";
+      case "cancelled_refunded":
+        return "bg-purple-100 text-purple-700";
       default:
         return "bg-gray-100 text-gray-700";
     }
@@ -216,10 +269,10 @@ export default function AdminOrdersPage() {
       acc.totalOrders += 1;
       acc.revenue += Number.isFinite(total) ? total : 0;
       if (status === "pending") acc.pending += 1;
-      if (status === "completed" || status === "delivered") acc.completed += 1;
+      if (status === "paid") acc.paid += 1;
       return acc;
     },
-    { totalOrders: 0, pending: 0, completed: 0, revenue: 0 },
+    { totalOrders: 0, pending: 0, paid: 0, revenue: 0 },
   );
 
   const exportFilteredOrders = useMemo(
@@ -298,9 +351,9 @@ export default function AdminOrdersPage() {
             <p className="mt-2 text-2xl font-bold text-yellow-800">{orderStats.pending}</p>
           </div>
           <div className="rounded-xl border border-green-200 bg-green-50 p-4 shadow-sm">
-            <p className="text-xs font-semibold uppercase text-green-700">Completed</p>
+            <p className="text-xs font-semibold uppercase text-green-700">Paid</p>
             <p className="mt-2 text-2xl font-bold text-green-800">
-              {orderStats.completed}
+              {orderStats.paid}
             </p>
           </div>
           <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 shadow-sm">
@@ -356,9 +409,10 @@ export default function AdminOrdersPage() {
                 <option value="pending">Pending only</option>
                 <option value="paid">Paid only</option>
                 <option value="shipped">Shipped only</option>
-                <option value="delivered">Delivered only</option>
-                <option value="completed">Completed only</option>
-                <option value="cancelled">Cancelled only</option>
+                <option value="cancelled_waiting_refund">
+                  Cancelled (waiting to be refunded)
+                </option>
+                <option value="cancelled_refunded">Cancelled and refunded</option>
               </select>
             </div>
             <button
@@ -518,12 +572,28 @@ export default function AdminOrdersPage() {
               </div>
 
               <div>
-                <p className="text-sm text-gray-500 font-semibold mb-2">
-                  DELIVERY ADDRESS
-                </p>
-                <p className="text-gray-900 font-medium">
-                  {getAddressText(selectedOrder)}
-                </p>
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <p className="text-sm text-gray-500 font-semibold">
+                    DELIVERY ADDRESS
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => handleCopyAddress(selectedOrder)}
+                    className="inline-flex items-center gap-1 rounded-md border border-gray-300 px-2.5 py-1.5 text-xs font-semibold text-gray-700 transition hover:bg-gray-100"
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                    {copiedAddressOrderId === String(selectedOrder.id)
+                      ? "Copied"
+                      : "Copy Address"}
+                  </button>
+                </div>
+                <div className="rounded-lg bg-gray-50 p-3">
+                  {getAddressLines(selectedOrder).map((line, idx) => (
+                    <p key={`${line}-${idx}`} className="text-gray-900 font-medium leading-6">
+                      {line}
+                    </p>
+                  ))}
+                </div>
               </div>
 
               <div>
@@ -577,18 +647,19 @@ export default function AdminOrdersPage() {
               <div className="bg-gray-50 p-4 rounded-lg space-y-3">
                 <p className="font-semibold text-gray-900">Order Status</p>
                 <select
-                  value={selectedOrder.status || "Paid"}
+                  value={normalizeOrderStatus(selectedOrder)}
                   onChange={(e) =>
                     handleStatusChange(selectedOrder.id, e.target.value)
                   }
                   className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-brand-navy"
                 >
-                  <option value="Paid">Paid</option>
-                  <option value="Pending">Pending</option>
-                  <option value="Shipped">Shipped</option>
-                  <option value="Delivered">Delivered</option>
-                  <option value="Completed">Completed (Legacy)</option>
-                  <option value="Cancelled">Cancelled</option>
+                  <option value="paid">Paid</option>
+                  <option value="pending">Pending</option>
+                  <option value="shipped">Shipped</option>
+                  <option value="cancelled_waiting_refund">
+                    Cancelled (waiting to be refunded)
+                  </option>
+                  <option value="cancelled_refunded">Cancelled and refunded</option>
                 </select>
                 <p className="text-xs text-gray-500">
                   Customer gets an email for every status change.
@@ -600,13 +671,13 @@ export default function AdminOrdersPage() {
                   onClick={() =>
                     handleStatusChange(
                       selectedOrder.id,
-                      selectedOrder.status === "Pending" ? "Delivered" : "Delivered",
+                      "shipped",
                     )
                   }
                   className="flex-1 flex items-center justify-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition font-semibold"
                 >
                   <CheckCircle className="h-5 w-5" />
-                  Mark Delivered
+                  Mark Shipped
                 </button>
                 <button
                   onClick={() => handleDelete(selectedOrder.id)}

@@ -106,66 +106,82 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "All fields are required" });
     }
 
-    // Persist to Firestore (primary source of truth)
-    const docRef = await contactsCollection().add({
-      name,
-      email,
-      phone,
-      subject: normalizedSubject,
-      message,
-      submittedAt: new Date().toISOString(),
-      read: false,
-      ipAddress:
-        (req.headers["x-forwarded-for"] || "").toString().split(",")[0].trim() ||
-        req.socket?.remoteAddress ||
-        "",
-      userAgent: req.headers["user-agent"] || "",
-    });
-    const submissionId = docRef.id;
-
-    // Send emails (required for "received in mail").
-    // We still keep the Firestore submission even if email fails, but we return an error.
-    let emailStatus = { ok: true };
+    let submissionId = `contact_${Date.now()}`;
+    let persistence = { ok: true, source: "firestore" };
     try {
-      const [userMail, adminMail] = await Promise.all([
-        sendContactConfirmation({
-          name,
-          email,
-          phone,
-          subject: normalizedSubject,
-          message,
-        }),
-        sendAdminNotification({
-          name,
-          email,
-          phone,
-          subject: normalizedSubject,
-          message,
-          submissionId,
-        }),
-      ]);
-
-      const skipped =
-        (userMail && userMail.skipped) || (adminMail && adminMail.skipped);
-      if (skipped) {
-        emailStatus = { ok: false, error: "EMAIL_NOT_CONFIGURED" };
-        return res.status(500).json({
-          error:
-            "Saved to Firestore, but email is not configured. Set EMAIL_USER, EMAIL_PASSWORD, EMAIL_FROM, ADMIN_EMAIL in Vercel.",
-          submissionId,
-          emailStatus,
-        });
-      }
-    } catch (emailError) {
-      emailStatus = {
+      // Persist to Firestore (primary source of truth)
+      const docRef = await contactsCollection().add({
+        name,
+        email,
+        phone,
+        subject: normalizedSubject,
+        message,
+        submittedAt: new Date().toISOString(),
+        read: false,
+        ipAddress:
+          (req.headers["x-forwarded-for"] || "")
+            .toString()
+            .split(",")[0]
+            .trim() ||
+          req.socket?.remoteAddress ||
+          "",
+        userAgent: req.headers["user-agent"] || "",
+      });
+      submissionId = docRef.id;
+    } catch (persistError) {
+      persistence = {
         ok: false,
-        error: emailError?.message || "EMAIL_SEND_FAILED",
+        source: "mail_only",
+        error: persistError?.message || "FIRESTORE_SAVE_FAILED",
       };
-      console.error("Email send failed:", emailError);
+      console.error("Contact save failed:", persistError);
+    }
+
+    // Send emails. Use allSettled so one failure doesn't mask the other.
+    const [userMailRes, adminMailRes] = await Promise.allSettled([
+      sendContactConfirmation({
+        name,
+        email,
+        phone,
+        subject: normalizedSubject,
+        message,
+      }),
+      sendAdminNotification({
+        name,
+        email,
+        phone,
+        subject: normalizedSubject,
+        message,
+        submissionId,
+      }),
+    ]);
+
+    const toEmailResult = (result) =>
+      result.status === "fulfilled"
+        ? {
+            ok: !result.value?.skipped,
+            skipped: !!result.value?.skipped,
+            reason: result.value?.reason || "",
+            messageId: result.value?.messageId || "",
+          }
+        : {
+            ok: false,
+            skipped: false,
+            reason: result.reason?.message || "EMAIL_SEND_FAILED",
+          };
+
+    const emailStatus = {
+      user: toEmailResult(userMailRes),
+      admin: toEmailResult(adminMailRes),
+    };
+
+    const anyMailWorked = emailStatus.user.ok || emailStatus.admin.ok;
+    if (!persistence.ok && !anyMailWorked) {
       return res.status(500).json({
         error:
-          "Saved to Firestore, but failed to send email. Check EMAIL_USER/EMAIL_PASSWORD (use Gmail App Password) and redeploy.",
+          "Failed to save contact and send emails. Check Firebase server env and SMTP env in Vercel.",
         submissionId,
+        persistence,
         emailStatus,
       });
     }
@@ -174,6 +190,11 @@ export default async function handler(req, res) {
       success: true,
       submissionId,
       message: "Contact form submitted successfully",
+      warning:
+        !persistence.ok || !emailStatus.user.ok || !emailStatus.admin.ok
+          ? "Partial success. Check email/firestore status fields."
+          : "",
+      persistence,
       emailStatus,
     });
   } catch (error) {

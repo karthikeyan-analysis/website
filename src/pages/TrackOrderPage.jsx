@@ -38,12 +38,12 @@ function getPlacedOnValue(order) {
 
 function getStatusLabel(status) {
   const normalized = String(status || "").trim().toLowerCase();
-  if (normalized === "completed") return "Delivered";
   if (normalized === "paid") return "Paid";
   if (normalized === "pending") return "Pending";
   if (normalized === "shipped") return "Shipped";
-  if (normalized === "delivered") return "Delivered";
-  if (normalized === "cancelled") return "Cancelled";
+  if (normalized === "cancelled_waiting_refund") return "Cancelled (Waiting to be refunded)";
+  if (normalized === "cancelled_refunded") return "Cancelled and Refunded";
+  if (normalized === "cancelled") return "Cancelled (Waiting to be refunded)";
   return status || "Paid";
 }
 

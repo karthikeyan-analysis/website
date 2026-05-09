@@ -20,6 +20,94 @@ function normalizeItems(rawItems) {
     .filter((i) => String(i.name).trim().length > 0);
 }
 
+function normalizeDate(value) {
+  const date = (() => {
+    if (!value) return null;
+    if (value instanceof Date) return value;
+    if (typeof value === "string") return new Date(value);
+    if (typeof value?.toDate === "function") return value.toDate();
+    if (value?._seconds) return new Date(value._seconds * 1000);
+    if (value?.seconds) return new Date(value.seconds * 1000);
+    return null;
+  })();
+  return date && !Number.isNaN(date.getTime()) ? date : null;
+}
+
+function formatCurrency(value) {
+  const amount = Number(value || 0);
+  if (!Number.isFinite(amount)) return "0.00";
+  return amount.toFixed(2);
+}
+
+function getSupportPhone() {
+  return process.env.SUPPORT_PHONE || process.env.ADMIN_PHONE || "+91 63859 39895";
+}
+
+function getTrackOrderUrl(orderId) {
+  const base = process.env.FRONTEND_URL || "https://www.karthikeyananalysis.in";
+  const safeBase = String(base).replace(/\/+$/, "");
+  const id = encodeURIComponent(String(orderId || "").trim());
+  return `${safeBase}/track-order/${id}`;
+}
+
+function buildOrderItemsTable(items) {
+  return items
+    .map((item) => {
+      const qty = Number(item.quantity || 0);
+      const price = Number(item.price || 0);
+      const lineTotal = qty * price;
+      return `
+        <tr>
+          <td style="padding:8px;border-bottom:1px solid #ddd;">${escapeHtml(item.name)}</td>
+          <td style="padding:8px;border-bottom:1px solid #ddd;text-align:center;">${escapeHtml(qty)}</td>
+          <td style="padding:8px;border-bottom:1px solid #ddd;text-align:right;">₹${escapeHtml(formatCurrency(price))}</td>
+          <td style="padding:8px;border-bottom:1px solid #ddd;text-align:right;">₹${escapeHtml(formatCurrency(lineTotal))}</td>
+        </tr>
+      `;
+    })
+    .join("");
+}
+
+function getStatusContent(status) {
+  const normalized = String(status || "").trim().toLowerCase();
+  switch (normalized) {
+    case "pending":
+      return {
+        label: "Pending",
+        summary:
+          "Your order is confirmed and currently pending processing. Our team will prepare and dispatch it soon.",
+      };
+    case "paid":
+      return {
+        label: "Paid",
+        summary:
+          "Payment is successful and your order is now in processing. We will notify you once it is shipped.",
+      };
+    case "shipped":
+      return {
+        label: "Shipped",
+        summary: "Your order has been shipped and is on the way to your delivery address.",
+      };
+    case "cancelled_waiting_refund":
+    case "cancelled":
+      return {
+        label: "Cancelled (Waiting to be refunded)",
+        summary:
+          "Your order has been cancelled and refund is being processed. Please allow some time for the refund to reflect.",
+      };
+    case "cancelled_refunded":
+      return {
+        label: "Cancelled and Refunded",
+        summary: "Your order has been cancelled and refund has been completed.",
+      };
+    default:
+      return {
+        label: status || "Updated",
+        summary: "Your order status has been updated.",
+      };
+  }
+}
+
 async function sendOrderConfirmation({
   orderId,
   customerName,
@@ -27,26 +115,30 @@ async function sendOrderConfirmation({
   items,
   total,
   orderDate,
+  paymentId,
+  address,
 }) {
-  const itemsHTML = items
-    .map(
-      (item) => `
-    <tr>
-      <td style="padding: 8px; border-bottom: 1px solid #ddd;">${escapeHtml(item.name)}</td>
-      <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: center;">${escapeHtml(item.quantity)}</td>
-      <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right;">₹${escapeHtml(item.price)}</td>
-    </tr>
-  `,
-    )
-    .join("");
+  const itemsHTML = buildOrderItemsTable(items);
+  const placedAt = normalizeDate(orderDate) || new Date();
+  const supportPhone = getSupportPhone();
+  const trackOrderUrl = getTrackOrderUrl(orderId);
 
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h2 style="color: #10197E;">Order Confirmation</h2>
       <p>Dear ${escapeHtml(customerName)},</p>
-      <p>Thank you for your order! We have received your purchase and will process it shortly.</p>
-      <p><strong>Order ID:</strong> ${orderId}</p>
-      <p><strong>Order Date:</strong> ${new Date(orderDate).toLocaleDateString()}</p>
+      <p>Thank you for your order. We have received your purchase and will process it shortly.</p>
+      <p><strong>Order ID:</strong> ${escapeHtml(orderId)}</p>
+      <p><strong>Order Date:</strong> ${escapeHtml(
+        placedAt.toLocaleString("en-IN"),
+      )}</p>
+      <p><strong>Status:</strong> Pending</p>
+      ${
+        paymentId
+          ? `<p><strong>Payment ID:</strong> ${escapeHtml(paymentId)}</p>`
+          : ""
+      }
+      ${address ? `<p><strong>Delivery Address:</strong><br>${formatMultiline(address)}</p>` : ""}
       <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
       <h3>Order Details:</h3>
       <table style="width: 100%; border-collapse: collapse;">
@@ -55,18 +147,28 @@ async function sendOrderConfirmation({
             <th style="padding: 8px; text-align: left; border-bottom: 2px solid #ddd;">Item</th>
             <th style="padding: 8px; text-align: center; border-bottom: 2px solid #ddd;">Qty</th>
             <th style="padding: 8px; text-align: right; border-bottom: 2px solid #ddd;">Price</th>
+            <th style="padding: 8px; text-align: right; border-bottom: 2px solid #ddd;">Subtotal</th>
           </tr>
         </thead>
         <tbody>${itemsHTML}</tbody>
         <tfoot>
           <tr>
-            <td colspan="2" style="padding: 8px; text-align: right;"><strong>Total:</strong></td>
-            <td style="padding: 8px; text-align: right;"><strong>₹${total}</strong></td>
+            <td colspan="3" style="padding: 8px; text-align: right;"><strong>Total:</strong></td>
+            <td style="padding: 8px; text-align: right;"><strong>₹${escapeHtml(
+              formatCurrency(total),
+            )}</strong></td>
           </tr>
         </tfoot>
       </table>
       <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-      <p>We will send you a shipping notification soon.</p>
+      <p><strong>Track your order:</strong> Use this Order ID on our website to track status.</p>
+      <p>
+        Track link:
+        <a href="${escapeHtml(trackOrderUrl)}">${escapeHtml(trackOrderUrl)}</a>
+      </p>
+      <p>If you have any queries, call us at <a href="tel:${escapeHtml(
+        supportPhone.replace(/\s+/g, ""),
+      )}">${escapeHtml(supportPhone)}</a>.</p>
       <p>Best regards,<br>Karthikeyan Analysis Team</p>
     </div>
   `;
@@ -109,7 +211,9 @@ async function sendAdminOrderNotification({
       <hr style="border:none;border-top:1px solid #ddd;margin:16px 0;" />
       <p><strong>Items:</strong></p>
       <ul>${itemsHTML}</ul>
-      <p style="text-align:right;"><strong>Total:</strong> ₹${escapeHtml(total)}</p>
+      <p style="text-align:right;"><strong>Total:</strong> ₹${escapeHtml(
+        formatCurrency(total),
+      )}</p>
     </div>
   `;
 
@@ -125,23 +229,58 @@ async function sendOrderStatusEmail({
   orderId,
   customerName,
   customerEmail,
+  items,
   status,
   total,
   paymentId,
   address,
+  orderDate,
 }) {
-  const statusText = String(status || "Updated");
-  const totalValue = Number(total || 0);
+  const statusInfo = getStatusContent(status);
+  const itemsHTML = buildOrderItemsTable(Array.isArray(items) ? items : []);
+  const supportPhone = getSupportPhone();
+  const trackOrderUrl = getTrackOrderUrl(orderId);
+  const placedAt = normalizeDate(orderDate);
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h2 style="color: #10197E;">Order Status Update</h2>
       <p>Dear ${escapeHtml(customerName || "Customer")},</p>
       <p>Your order <strong>${escapeHtml(orderId)}</strong> status is now:</p>
-      <p style="font-size: 16px; font-weight: 700; color: #10197E;">${escapeHtml(statusText)}</p>
-      <p><strong>Total:</strong> ₹${escapeHtml(totalValue.toFixed(2))}</p>
+      <p style="font-size: 16px; font-weight: 700; color: #10197E;">${escapeHtml(
+        statusInfo.label,
+      )}</p>
+      <p>${escapeHtml(statusInfo.summary)}</p>
+      ${placedAt ? `<p><strong>Order Date:</strong> ${escapeHtml(placedAt.toLocaleString("en-IN"))}</p>` : ""}
+      <p><strong>Total:</strong> ₹${escapeHtml(formatCurrency(total))}</p>
       ${paymentId ? `<p><strong>Payment ID:</strong> ${escapeHtml(paymentId)}</p>` : ""}
       ${address ? `<p><strong>Delivery Address:</strong><br>${formatMultiline(address)}</p>` : ""}
+      ${
+        itemsHTML
+          ? `
+      <h3 style="margin-top:18px;">Order Details:</h3>
+      <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr style="background-color: #f5f5f5;">
+            <th style="padding: 8px; text-align: left; border-bottom: 2px solid #ddd;">Item</th>
+            <th style="padding: 8px; text-align: center; border-bottom: 2px solid #ddd;">Qty</th>
+            <th style="padding: 8px; text-align: right; border-bottom: 2px solid #ddd;">Price</th>
+            <th style="padding: 8px; text-align: right; border-bottom: 2px solid #ddd;">Subtotal</th>
+          </tr>
+        </thead>
+        <tbody>${itemsHTML}</tbody>
+      </table>
+      `
+          : ""
+      }
       <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+      <p><strong>Track your order:</strong> Use this Order ID on our website to track status.</p>
+      <p>
+        Track link:
+        <a href="${escapeHtml(trackOrderUrl)}">${escapeHtml(trackOrderUrl)}</a>
+      </p>
+      <p>If you have any queries, call us at <a href="tel:${escapeHtml(
+        supportPhone.replace(/\s+/g, ""),
+      )}">${escapeHtml(supportPhone)}</a>.</p>
       <p>Thank you for shopping with us.</p>
       <p>Best regards,<br>Karthikeyan Analysis Team</p>
     </div>
@@ -149,7 +288,7 @@ async function sendOrderStatusEmail({
 
   return safeSendMail({
     to: customerEmail,
-    subject: `Order ${orderId} • Status: ${statusText}`,
+    subject: `Order ${orderId} • Status: ${statusInfo.label}`,
     html: htmlContent,
     replyTo: getAdminEmail(),
   });
@@ -207,6 +346,8 @@ export default async function handler(req, res) {
             items,
             total,
             orderDate: order.createdAt || new Date(),
+            paymentId: order.razorpay_payment_id || "",
+            address,
           }),
           sendAdminOrderNotification({
             orderId,
@@ -244,10 +385,12 @@ export default async function handler(req, res) {
           orderId,
           customerName,
           customerEmail,
+          items: normalizeItems(order.items || []),
           status,
           total,
           paymentId,
           address,
+          orderDate: order.createdAt || order.orderDate || null,
         });
         return res.status(200).json({
           success: true,
@@ -292,6 +435,8 @@ export default async function handler(req, res) {
           items: normalizedItems,
           total,
           orderDate: new Date(),
+          paymentId: "",
+          address: address || "",
         }),
         sendAdminOrderNotification({
           orderId,
