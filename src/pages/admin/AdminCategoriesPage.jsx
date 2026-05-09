@@ -17,12 +17,21 @@ export default function AdminCategoriesPage() {
     description: "",
     image: "",
   });
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState("");
   const [errors, setErrors] = useState({});
 
   // Load categories
   useEffect(() => {
     loadCategories();
   }, []);
+
+  useEffect(() => {
+    if (!imageFile) return;
+    const next = URL.createObjectURL(imageFile);
+    setImagePreview(next);
+    return () => URL.revokeObjectURL(next);
+  }, [imageFile]);
 
   const loadCategories = async () => {
     try {
@@ -59,10 +68,14 @@ export default function AdminCategoriesPage() {
     setError(null);
 
     try {
+      const uploadedImageUrl = imageFile
+        ? await categoriesService.uploadCategoryImage(imageFile)
+        : "";
+
       const categoryData = {
         name: formData.name.trim(),
         description: formData.description.trim(),
-        image: formData.image.trim(),
+        image: (uploadedImageUrl || formData.image).trim(),
       };
 
       if (editingId) {
@@ -82,6 +95,8 @@ export default function AdminCategoriesPage() {
 
       // Reset form
       setFormData({ name: "", description: "", image: "" });
+      setImageFile(null);
+      setImagePreview("");
       setErrors({});
       setEditingId(null);
       setShowForm(false);
@@ -102,6 +117,8 @@ export default function AdminCategoriesPage() {
       description: category.description || "",
       image: category.image || "",
     });
+    setImageFile(null);
+    setImagePreview(category.image || "");
     setEditingId(category.id);
     setShowForm(true);
     setErrors({});
@@ -130,6 +147,8 @@ export default function AdminCategoriesPage() {
 
   const handleCancel = () => {
     setFormData({ name: "", description: "", image: "" });
+    setImageFile(null);
+    setImagePreview("");
     setErrors({});
     setEditingId(null);
     setShowForm(false);
@@ -215,17 +234,70 @@ export default function AdminCategoriesPage() {
 
               <div>
                 <label className="block text-sm font-medium text-brand-black/80">
-                  Image URL
+                  Category Image
                 </label>
-                <input
-                  type="url"
-                  value={formData.image}
-                  onChange={(e) =>
-                    setFormData({ ...formData, image: e.target.value })
-                  }
-                  className="mt-1 w-full rounded-lg border border-black/10 px-4 py-2 transition focus:border-brand-navy focus:outline-none"
-                  placeholder="https://example.com/image.jpg"
-                />
+                <div className="mt-1 grid gap-3 md:grid-cols-2">
+                  <div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null;
+                        setImageFile(file);
+                        if (file) {
+                          setFormData((prev) => ({ ...prev, image: "" }));
+                        }
+                      }}
+                      className="block w-full rounded-lg border border-black/10 bg-white px-4 py-2 transition focus:border-brand-navy focus:outline-none"
+                    />
+                    <p className="mt-1 text-xs text-brand-black/50">
+                      Upload an image (recommended), or use an image URL below.
+                    </p>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    {imagePreview ? (
+                      <img
+                        src={imagePreview}
+                        alt="Category preview"
+                        className="h-20 w-20 rounded-lg object-cover border border-black/10"
+                      />
+                    ) : (
+                      <div className="h-20 w-20 rounded-lg border border-dashed border-black/20 bg-black/2" />
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setImageFile(null);
+                        setImagePreview("");
+                      }}
+                      className="rounded-lg border border-black/10 px-3 py-2 text-sm transition hover:bg-black/5"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-3">
+                  <label className="block text-sm font-medium text-brand-black/80">
+                    Image URL (optional)
+                  </label>
+                  <input
+                    type="url"
+                    value={formData.image}
+                    onChange={(e) => {
+                      setFormData({ ...formData, image: e.target.value });
+                      if (e.target.value) {
+                        setImageFile(null);
+                        setImagePreview(e.target.value);
+                      } else if (!imageFile) {
+                        setImagePreview("");
+                      }
+                    }}
+                    className="mt-1 w-full rounded-lg border border-black/10 px-4 py-2 transition focus:border-brand-navy focus:outline-none"
+                    placeholder="https://example.com/image.jpg"
+                  />
+                </div>
               </div>
 
               <div className="flex gap-3 pt-4">

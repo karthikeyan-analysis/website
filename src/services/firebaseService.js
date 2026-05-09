@@ -118,6 +118,23 @@ export const categoriesService = {
     }
   },
 
+  async uploadCategoryImage(file) {
+    try {
+      if (!file) return "";
+      const timestamp = Date.now();
+      const safeName = String(file.name || "category")
+        .replace(/[^\w.\-]+/g, "_")
+        .slice(0, 120);
+      const fileName = `${timestamp}_${safeName}`;
+      const storageRef = ref(storage, `categories/${fileName}`);
+      const snapshot = await uploadBytes(storageRef, file);
+      return await getDownloadURL(snapshot.ref);
+    } catch (error) {
+      console.error("Error uploading category image:", error);
+      throw error;
+    }
+  },
+
   async getCategoryById(id) {
     try {
       return await categoriesAPI.getById(id);
