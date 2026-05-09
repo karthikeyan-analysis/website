@@ -29,7 +29,24 @@ export default async function handler(req, res) {
       const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       res.status(200).json(rows);
     } else if (req.method === "POST") {
-      const { name, description, image } = req.body;
+      const { _action, id, name, description, image } = req.body;
+
+      if (_action === "delete") {
+        if (!id || typeof id !== "string") {
+          return res.status(400).json({ error: "Invalid category id" });
+        }
+
+        const ref = categoriesCollection().doc(id);
+        const snap = await ref.get();
+        if (!snap.exists) {
+          return res.status(404).json({ error: "Category not found" });
+        }
+
+        await ref.delete();
+        return res
+          .status(200)
+          .json({ success: true, message: "Category deleted successfully" });
+      }
 
       if (!name || !name.trim()) {
         return res.status(400).json({ error: "Category name is required" });

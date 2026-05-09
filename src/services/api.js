@@ -69,14 +69,10 @@ export const categoriesAPI = {
   },
 
   async delete(id) {
-    // Some hosts (or proxies) block DELETE (and sometimes POST) requests on dynamic routes.
-    // Use PUT with a delete flag so it still works behind restrictive proxies.
-    return apiCall(`/categories/${id}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ _delete: true }),
+    // Keep delete on collection endpoint to avoid hosts that block methods on /categories/:id.
+    return apiCall("/categories", {
+      method: "POST",
+      body: JSON.stringify({ _action: "delete", id }),
     });
   },
 };
