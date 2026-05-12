@@ -91,11 +91,14 @@ async function sendOrderStatusEmail(
     supportPhone,
     trackOrderUrl,
   });
+  const safeHtml = String(htmlContent || "").trim();
 
   await safeSendMail({
     to: customerEmail,
     subject: getCustomerStatusEmailSubject(status, orderId),
-    html: htmlContent,
+    html:
+      safeHtml ||
+      `<p>Order ${escapeHtml(orderId)} status update: ${escapeHtml(String(status || "Updated"))}</p>`,
     replyTo: getAdminEmail(),
   });
 }

@@ -303,8 +303,7 @@ export function buildCustomerOrderStatusEmailBodyHtml({
   const statusInfo = getStatusContentForOrderEmail(status);
   const headline = getCustomerStatusEmailHeadline(status);
   const placedAt = normalizeOrderEmailDate(orderDate);
-
-  return `
+  const body = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h2 style="color: #10197E;">${escapeHtml(headline)}</h2>
       <p>Dear ${escapeHtml(customerName || "Customer")},</p>
@@ -366,4 +365,17 @@ export function buildCustomerOrderStatusEmailBodyHtml({
       <p>Best regards,<br>Karthikeyan Analysis Team</p>
     </div>
   `;
+
+  // Use a complete HTML document for better compatibility with strict mail clients.
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${escapeHtml(headline)}</title>
+  </head>
+  <body style="margin:0;padding:16px;background:#ffffff;color:#111111;">
+    ${body}
+  </body>
+</html>`;
 }

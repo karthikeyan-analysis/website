@@ -244,11 +244,14 @@ async function sendOrderStatusEmail({
     supportPhone,
     trackOrderUrl,
   });
+  const safeHtml = String(htmlContent || "").trim();
 
   return safeSendMail({
     to: customerEmail,
     subject: emailSubject,
-    html: htmlContent,
+    html:
+      safeHtml ||
+      `<p>Order ${escapeHtml(orderId)} status update: ${escapeHtml(String(status || "Updated"))}</p>`,
     replyTo: getAdminEmail(),
   });
 }
