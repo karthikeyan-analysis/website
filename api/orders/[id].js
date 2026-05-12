@@ -1,4 +1,5 @@
 import {
+  buildOrderStatusSupportCalloutHtml,
   escapeHtml,
   formatMultiline,
   getAdminEmail,
@@ -127,7 +128,6 @@ async function sendOrderStatusEmail(
 ) {
   const config = getStatusContent(status, orderId);
   const supportPhone = getSupportPhone();
-  const telHref = escapeHtml(supportPhone.replace(/\s+/g, ""));
   const trackOrderUrl = getTrackOrderUrl();
   const placedAt = normalizeDate(orderDate);
   const normalized = normalizeItems(items || []);
@@ -184,9 +184,7 @@ async function sendOrderStatusEmail(
       </table>
 
       <div style="margin:24px 0;padding:16px 18px;background:#fafbff;border-left:4px solid #10197E;border-radius:4px;">
-        <p style="margin:0 0 10px 0;"><strong>For any queries,</strong> contact us at our number:
-          <a href="tel:${telHref}" style="color:#10197E;font-weight:700;">${escapeHtml(supportPhone)}</a>.
-        </p>
+        ${buildOrderStatusSupportCalloutHtml(status, supportPhone)}
         <p style="margin:0 0 10px 0;">
           <strong>Check your order status</strong> on our website anytime using your Order ID
           (<strong>${escapeHtml(orderId)}</strong>). Open the Track order page and enter this ID when asked.

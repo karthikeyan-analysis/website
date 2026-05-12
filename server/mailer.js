@@ -146,6 +146,37 @@ export function escapeHtml(str) {
     .replace(/'/g, "&#039;");
 }
 
+function supportTelHrefForEmail(phone) {
+  return escapeHtml(String(phone || "").trim().replace(/\s+/g, ""));
+}
+
+/** Prefer "63859 39895" style label when the number has 10+ digits; otherwise show the raw string. */
+function supportPhoneLinkLabel(phone) {
+  const raw = String(phone || "").trim();
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length >= 10) {
+    const last10 = digits.slice(-10);
+    return escapeHtml(`${last10.slice(0, 5)} ${last10.slice(5)}`);
+  }
+  return escapeHtml(raw || "+91 63859 39895");
+}
+
+/**
+ * Customer-facing support line in order status HTML emails.
+ * Shipped orders get delivery follow-up copy; other statuses keep a short contact line.
+ */
+export function buildOrderStatusSupportCalloutHtml(status, supportPhone) {
+  const phone = String(supportPhone || "").trim() || "+91 63859 39895";
+  const telHref = supportTelHrefForEmail(phone);
+  const label = supportPhoneLinkLabel(phone);
+  const n = String(status || "").trim().toLowerCase();
+  const sentence =
+    n === "shipped"
+      ? `If you have not received your order within 48 hours, please contact our support team at <a href="tel:${telHref}" style="color:#10197E;font-weight:700;">${label}</a>.`
+      : `If you have any questions, please contact our support team at <a href="tel:${telHref}" style="color:#10197E;font-weight:700;">${label}</a>.`;
+  return `<p style="margin:0 0 10px 0;">${sentence}</p>`;
+}
+
 export function formatMultiline(text) {
   return escapeHtml(normalizeNewlines(text)).replace(/\n/g, "<br>");
 }
