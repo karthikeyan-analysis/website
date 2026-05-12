@@ -252,11 +252,11 @@ export default function Header() {
       {/* Middle: banner only */}
       <div className="relative z-40 bg-white">
         <Container className="py-1.5 sm:py-2">
-          <div className="grid min-h-14 grid-cols-[1fr_auto] items-center gap-3 lg:block">
+          <div className="grid min-h-14 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 lg:block">
             <img
               src="/banner.jpeg"
               alt="Karthikeyan Analysis"
-              className="h-12 w-full max-w-none object-contain sm:h-14 md:h-16 lg:h-[4.25rem]"
+              className="h-12 w-full min-w-0 max-w-full object-contain sm:h-14 md:h-16 lg:h-[4.25rem]"
               loading="eager"
               decoding="async"
             />

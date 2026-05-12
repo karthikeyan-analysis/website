@@ -73,17 +73,17 @@ export default function ContactPage() {
       title="Contact us"
       subtitle="We'd love to hear from you! Send us a message and we'll respond as soon as possible."
     >
-      <section className="bg-white/60 py-14">
-        <Container>
-          <div className="mb-10">
+      <section className="min-w-0 overflow-x-clip bg-white/60 py-14 pb-28 lg:pb-14">
+        <Container className="min-w-0">
+          <div className="mb-10 min-w-0">
             <h2 className="text-3xl font-bold text-brand-navy">Get In Touch</h2>
           </div>
 
-          <div className="grid gap-8 lg:grid-cols-2">
+          <div className="grid min-w-0 gap-8 lg:grid-cols-2">
             {/* Form */}
-            <div>
-              <Card color="blue">
-                <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="min-w-0">
+              <Card color="blue" className="min-w-0 max-w-full">
+                <form onSubmit={handleSubmit} className="min-w-0 space-y-4">
                   {success && (
                     <div className="rounded-lg bg-green-50 p-4 border border-green-200 space-y-2">
                       <p className="text-green-700 font-medium">
@@ -172,68 +172,68 @@ export default function ContactPage() {
             </div>
 
             {/* Contact Information */}
-            <div>
-              <Card color="orange">
+            <div className="min-w-0">
+              <Card color="orange" className="min-w-0 max-w-full">
                 <h3 className="text-2xl font-bold text-brand-navy mb-6">
                   Talk To Us
                 </h3>
 
                 <div className="space-y-6">
                   {/* Email */}
-                  <div className="flex gap-4">
+                  <div className="flex min-w-0 gap-4">
                     <div className="flex-shrink-0">
                       <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-brand-green/10">
                         <Mail className="h-6 w-6 text-brand-green" />
                       </div>
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <h4 className="font-semibold text-brand-black">EMAIL</h4>
-                      <p className="text-sm text-brand-black/70 mt-1">
+                      <p className="mt-1 break-words text-sm text-brand-black/70">
                         karthikeyananalysisstudycircle@gmail.com
                       </p>
                     </div>
                   </div>
 
                   {/* Phone */}
-                  <div className="flex gap-4">
+                  <div className="flex min-w-0 gap-4">
                     <div className="flex-shrink-0">
                       <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-brand-green/10">
                         <Phone className="h-6 w-6 text-brand-green" />
                       </div>
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <h4 className="font-semibold text-brand-black">
                         PHONE NUMBER
                       </h4>
-                      <p className="text-sm text-brand-black/70 mt-1">
+                      <p className="mt-1 break-words text-sm text-brand-black/70">
                         +91 63859 39895
                       </p>
                     </div>
                   </div>
 
                   {/* Address */}
-                  <div className="flex gap-4">
+                  <div className="flex min-w-0 gap-4">
                     <div className="flex-shrink-0">
                       <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-brand-green/10">
                         <MapPin className="h-6 w-6 text-brand-green" />
                       </div>
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <h4 className="font-semibold text-brand-black">
                         ADDRESS
                       </h4>
-                      <p className="text-sm text-brand-black/70 mt-1">
+                      <p className="mt-1 break-words text-sm text-brand-black/70">
                         No - 110, Uthamar Gandhi Road, Chennai – 600034.
                       </p>
                     </div>
                   </div>
 
                   {/* Social Media */}
-                  <div>
+                  <div className="min-w-0">
                     <h4 className="font-semibold text-brand-black mb-4">
                       Follow Us:
                     </h4>
-                    <div className="flex gap-4">
+                    <div className="flex flex-wrap gap-4">
                       <a
                         href="https://t.me/karthikeyananalysis"
                         target="_blank"
@@ -280,10 +280,11 @@ export default function ContactPage() {
       </section>
 
       {/* Google Maps Section */}
-      <section className="bg-white py-14">
-        <Container>
-          <div className="rounded-2xl overflow-hidden shadow-lg h-96">
+      <section className="min-w-0 overflow-x-clip bg-white py-14">
+        <Container className="min-w-0">
+          <div className="h-96 min-w-0 max-w-full overflow-hidden rounded-2xl shadow-lg">
             <iframe
+              className="block h-full min-h-0 w-full min-w-0 max-w-full"
               src="https://maps.google.com/maps?q=13%C2%B003%2742.5%22N%2080%C2%B014%2748.3%22E&t=m&z=15&output=embed&iwloc=near"
               width="100%"
               height="100%"

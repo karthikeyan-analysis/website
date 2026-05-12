@@ -1,10 +1,4 @@
-import {
-  BadgeCheck,
-  Headset,
-  ShieldCheck,
-  SlidersHorizontal,
-  Truck,
-} from "lucide-react";
+import { Headset, ShieldCheck, SlidersHorizontal, Truck } from "lucide-react";
 import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import PageLayout from "../components/layout/PageLayout";
@@ -124,27 +118,6 @@ export default function BookStorePage() {
           </aside>
 
           <div>
-            <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              <div className="rounded-2xl bg-brand-navy p-4 text-white shadow-soft">
-                <p className="text-xs uppercase tracking-wide text-brand-orange">
-                  Secure Payment
-                </p>
-                <p className="mt-1 text-sm">All payments are SSL secured</p>
-              </div>
-              <div className="rounded-2xl bg-white p-4 text-brand-navy ring-1 ring-black/10">
-                <p className="flex items-center gap-2 text-xs uppercase tracking-wide">
-                  <Truck className="h-4 w-4" /> Delivered with care
-                </p>
-                <p className="mt-1 text-sm">Super fast shipping to your door</p>
-              </div>
-              <div className="rounded-2xl bg-white p-4 text-brand-navy ring-1 ring-black/10">
-                <p className="flex items-center gap-2 text-xs uppercase tracking-wide">
-                  <BadgeCheck className="h-4 w-4" /> Trusted Coaching
-                </p>
-                <p className="mt-1 text-sm">Results-driven mentorship</p>
-              </div>
-            </div>
-
             {loading ? (
               <div className="text-center py-12">
                 <p className="text-gray-500">Loading products...</p>
@@ -175,14 +148,16 @@ export default function BookStorePage() {
                   >
                     <div className="mb-4 overflow-hidden rounded-xl border border-black/10 bg-black/[0.02]">
                       {coverSrc ? (
-                        <img
-                          src={coverSrc}
-                          alt={product.name}
-                          className="h-44 w-full object-cover transition duration-300 group-hover:scale-[1.03]"
-                          loading="lazy"
-                        />
+                        <div className="relative w-full aspect-[1279/1600] bg-white">
+                          <img
+                            src={coverSrc}
+                            alt={product.name}
+                            className="absolute inset-0 h-full w-full object-contain object-center transition duration-300 group-hover:opacity-95"
+                            loading="lazy"
+                          />
+                        </div>
                       ) : (
-                        <div className="grid h-44 w-full place-items-center text-sm text-brand-black/45">
+                        <div className="flex aspect-[1279/1600] w-full items-center justify-center text-sm text-brand-black/45">
                           No image
                         </div>
                       )}

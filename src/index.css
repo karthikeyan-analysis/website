@@ -17,12 +17,16 @@
   html {
     scroll-behavior: smooth;
     font-family: "Montserrat", ui-sans-serif, system-ui, sans-serif;
+    overflow-x: clip;
+    max-width: 100%;
   }
 
   body {
     @apply m-0 bg-slate-50 text-brand-black/80 antialiased;
     font-family: "Montserrat", ui-sans-serif, system-ui, sans-serif;
     -webkit-overflow-scrolling: touch;
+    overflow-x: clip;
+    max-width: 100%;
   }
 
   ::selection {
@@ -31,6 +35,8 @@
 
   #root {
     @apply min-h-[100dvh];
+    overflow-x: clip;
+    max-width: 100%;
   }
 
   * {

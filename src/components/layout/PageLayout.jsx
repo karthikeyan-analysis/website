@@ -7,8 +7,8 @@ export default function PageLayout({ title, subtitle, children }) {
   return (
     <>
       <Header />
-      <main>
-        <section className="relative overflow-hidden border-b border-black/[0.06] bg-gradient-to-b from-slate-50 via-white to-white">
+      <main className="min-w-0 overflow-x-clip">
+        <section className="relative overflow-x-clip border-b border-black/[0.06] bg-gradient-to-b from-slate-50 via-white to-white">
           <div className="absolute inset-0 noise opacity-70" aria-hidden="true" />
           <div
             className="pointer-events-none absolute -right-40 -top-32 h-[22rem] w-[22rem] rounded-full bg-brand-sky/[0.12] blur-3xl"
