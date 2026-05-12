@@ -1,10 +1,8 @@
 import {
-  buildOrderStatusSupportCalloutHtml,
-  escapeHtml,
-  formatMultiline,
-  getAdminEmail,
-  safeSendMail,
-} from "../../server/mailer.js";
+  buildCustomerOrderStatusEmailBodyHtml,
+  getCustomerStatusEmailSubject,
+} from "../../server/orderCustomerStatusEmail.js";
+import { escapeHtml, getAdminEmail, safeSendMail } from "../../server/mailer.js";
 import { getAdminDb } from "../../server/firebaseAdmin.js";
 
 function normalizeItems(rawItems) {
@@ -37,19 +35,6 @@ function getTrackOrderUrl() {
   return `${safeBase}/track-order`;
 }
 
-function normalizeDate(value) {
-  const date = (() => {
-    if (!value) return null;
-    if (value instanceof Date) return value;
-    if (typeof value === "string") return new Date(value);
-    if (typeof value?.toDate === "function") return value.toDate();
-    if (value?._seconds) return new Date(value._seconds * 1000);
-    if (value?.seconds) return new Date(value.seconds * 1000);
-    return null;
-  })();
-  return date && !Number.isNaN(date.getTime()) ? date : null;
-}
-
 function buildOrderItemsRowsHtml(items) {
   return normalizeItems(items)
     .map((item) => {
@@ -66,53 +51,6 @@ function buildOrderItemsRowsHtml(items) {
     .join("");
 }
 
-function getStatusContent(status, orderId) {
-  const normalized = String(status || "").trim().toLowerCase();
-  const byStatus = {
-    pending: {
-      subject: `Your Order Is Pending - ${orderId}`,
-      label: "Pending",
-      message:
-        "Your order is confirmed and currently pending processing. We will ship it soon.",
-    },
-    paid: {
-      subject: `Payment Received - ${orderId}`,
-      label: "Paid",
-      message:
-        "We have received payment for your order. Our team is preparing your shipment.",
-    },
-    shipped: {
-      subject: `Your Order Has Been Shipped - ${orderId}`,
-      label: "Shipped",
-      message: "Your order has been shipped and is on its way to you.",
-    },
-    cancelled_waiting_refund: {
-      subject: `Your Order Has Been Cancelled - ${orderId}`,
-      label: "Cancelled (Waiting to be refunded)",
-      message:
-        "Your order has been cancelled and refund is being processed.",
-    },
-    cancelled: {
-      subject: `Your Order Has Been Cancelled - ${orderId}`,
-      label: "Cancelled (Waiting to be refunded)",
-      message:
-        "Your order has been cancelled and refund is being processed.",
-    },
-    cancelled_refunded: {
-      subject: `Refund Processed - ${orderId}`,
-      label: "Cancelled and Refunded",
-      message: "Your order has been cancelled and refund has been completed.",
-    },
-  };
-  return (
-    byStatus[normalized] || {
-      subject: `Order Status Updated - ${orderId}`,
-      label: status || "Updated",
-      message: "Your order status has been updated.",
-    }
-  );
-}
-
 async function sendOrderStatusEmail(
   status,
   {
@@ -126,10 +64,6 @@ async function sendOrderStatusEmail(
     orderDate,
   },
 ) {
-  const config = getStatusContent(status, orderId);
-  const supportPhone = getSupportPhone();
-  const trackOrderUrl = getTrackOrderUrl();
-  const placedAt = normalizeDate(orderDate);
   const normalized = normalizeItems(items || []);
   const itemsBodyHTML =
     normalized.length > 0
@@ -140,69 +74,25 @@ async function sendOrderStatusEmail(
         </td>
       </tr>`;
 
-  const htmlContent = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: #10197E;">${escapeHtml(config.label)} — update</h2>
-      <p>Dear ${escapeHtml(customerName || "Customer")},</p>
-      <p>${escapeHtml(config.message)}</p>
-
-      <div style="margin:18px 0;padding:14px 16px;background:#f5f7ff;border:1px solid #cfd6f6;border-radius:6px;">
-        <p style="margin:0 0 6px 0;font-size:13px;color:#334;text-transform:uppercase;letter-spacing:0.04em;">Your order ID</p>
-        <p style="margin:0;font-size:18px;font-weight:700;color:#10197E;word-break:break-all;">${escapeHtml(orderId)}</p>
-        <p style="margin:12px 0 0 0;font-size:14px;color:#333;">
-          Always use this Order ID when you contact us or when you check your order status on our website.
-        </p>
-      </div>
-
-      <p><strong>Current status:</strong> ${escapeHtml(config.label)}</p>
-
-      <hr style="border: none; border-top: 1px solid #ddd; margin: 22px 0;">
-      <h3 style="margin:0 0 12px 0;color:#10197E;">Complete order details</h3>
-      ${placedAt ? `<p><strong>Order date:</strong> ${escapeHtml(placedAt.toLocaleString("en-IN"))}</p>` : ""}
-      ${paymentId ? `<p><strong>Payment ID:</strong> ${escapeHtml(paymentId)}</p>` : ""}
-      ${address ? `<p><strong>Delivery address:</strong><br>${formatMultiline(address)}</p>` : ""}
-      ${customerEmail ? `<p><strong>Email on order:</strong> ${escapeHtml(customerEmail)}</p>` : ""}
-
-      <table style="width: 100%; border-collapse: collapse; margin-top: 14px;">
-        <thead>
-          <tr style="background-color: #f5f5f5;">
-            <th style="padding: 8px; text-align: left; border-bottom: 2px solid #ddd;">Item</th>
-            <th style="padding: 8px; text-align: center; border-bottom: 2px solid #ddd;">Qty</th>
-            <th style="padding: 8px; text-align: right; border-bottom: 2px solid #ddd;">Price</th>
-            <th style="padding: 8px; text-align: right; border-bottom: 2px solid #ddd;">Subtotal</th>
-          </tr>
-        </thead>
-        <tbody>${itemsBodyHTML}</tbody>
-        <tfoot>
-          <tr>
-            <td colspan="3" style="padding: 8px; text-align: right; border-top: 2px solid #ddd;"><strong>Order total</strong></td>
-            <td style="padding: 8px; text-align: right; border-top: 2px solid #ddd;"><strong>₹${escapeHtml(
-              formatCurrency(total),
-            )}</strong></td>
-          </tr>
-        </tfoot>
-      </table>
-
-      <div style="margin:24px 0;padding:16px 18px;background:#fafbff;border-left:4px solid #10197E;border-radius:4px;">
-        ${buildOrderStatusSupportCalloutHtml(status, supportPhone)}
-        <p style="margin:0 0 10px 0;">
-          <strong>Check your order status</strong> on our website anytime using your Order ID
-          (<strong>${escapeHtml(orderId)}</strong>). Open the Track order page and enter this ID when asked.
-        </p>
-        <p style="margin:0;font-size:14px;">
-          Direct link:
-          <a href="${escapeHtml(trackOrderUrl)}" style="color:#10197E;">${escapeHtml(trackOrderUrl)}</a>
-        </p>
-      </div>
-
-      <p>Thank you for shopping with us.</p>
-      <p>Best regards,<br>Karthikeyan Analysis Team</p>
-    </div>
-  `;
+  const supportPhone = getSupportPhone();
+  const trackOrderUrl = getTrackOrderUrl();
+  const htmlContent = buildCustomerOrderStatusEmailBodyHtml({
+    orderId,
+    customerName,
+    customerEmail,
+    status,
+    total,
+    paymentId,
+    address,
+    orderDate,
+    itemsBodyHTML,
+    supportPhone,
+    trackOrderUrl,
+  });
 
   await safeSendMail({
     to: customerEmail,
-    subject: config.subject,
+    subject: getCustomerStatusEmailSubject(status, orderId),
     html: htmlContent,
     replyTo: getAdminEmail(),
   });
