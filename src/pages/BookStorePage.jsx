@@ -12,7 +12,10 @@ import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
 import Container from "../components/ui/Container";
 import { useCart } from "../hooks/useCart";
-import { productsService } from "../services/firebaseService";
+import {
+  categoriesService,
+  productsService,
+} from "../services/firebaseService";
 
 function productCoverImageUrl(product) {
   const listed = Array.isArray(product?.images)
@@ -50,11 +53,28 @@ export default function BookStorePage() {
   useEffect(() => {
     const loadProducts = async () => {
       try {
-        const data = await productsService.getProducts();
+        const [data, firestoreCategories] = await Promise.all([
+          productsService.getProducts(),
+          categoriesService.getCategories().catch((err) => {
+            console.error("Error loading categories:", err);
+            return [];
+          }),
+        ]);
         setProducts(data);
-        // Extract unique categories
-        const categories = [...new Set(data.map((p) => p.category))];
-        setProductCategories(categories);
+        const fromFirestore = firestoreCategories
+          .map((c) => String(c?.name || "").trim())
+          .filter(Boolean);
+        const fromProducts = [
+          ...new Set(
+            data
+              .map((p) => String(p?.category || "").trim())
+              .filter(Boolean),
+          ),
+        ];
+        const merged = [
+          ...new Set([...fromFirestore, ...fromProducts]),
+        ].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+        setProductCategories(merged);
       } catch (error) {
         console.error("Error loading products:", error);
       } finally {
