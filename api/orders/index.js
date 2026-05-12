@@ -1,11 +1,9 @@
 import {
   buildCustomerOrderStatusEmailBodyHtml,
-  getCustomerStatusEmailSubject,
-} from "../../server/orderCustomerStatusEmail.js";
-import {
   escapeHtml,
   formatMultiline,
   getAdminEmail,
+  getCustomerStatusEmailSubject,
   safeSendMail,
 } from "../../server/mailer.js";
 import { getAdminDb } from "../../server/firebaseAdmin.js";

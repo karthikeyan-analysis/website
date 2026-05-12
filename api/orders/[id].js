@@ -1,8 +1,10 @@
 import {
   buildCustomerOrderStatusEmailBodyHtml,
+  escapeHtml,
+  getAdminEmail,
   getCustomerStatusEmailSubject,
-} from "../../server/orderCustomerStatusEmail.js";
-import { escapeHtml, getAdminEmail, safeSendMail } from "../../server/mailer.js";
+  safeSendMail,
+} from "../../server/mailer.js";
 import { getAdminDb } from "../../server/firebaseAdmin.js";
 
 function normalizeItems(rawItems) {
