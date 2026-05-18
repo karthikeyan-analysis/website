@@ -20,9 +20,6 @@ export function validatePassword(password) {
   if (!/[a-z]/.test(password)) {
     return "Password must include a lowercase letter.";
   }
-  if (!/[A-Z]/.test(password)) {
-    return "Password must include an uppercase letter.";
-  }
   if (!/[0-9]/.test(password)) {
     return "Password must include a number.";
   }
@@ -38,7 +35,7 @@ export function mapFirebaseAuthError(error) {
     "auth/wrong-password": "Invalid email or password.",
     "auth/invalid-credential": "Invalid email or password.",
     "auth/email-already-in-use": "An account with this email already exists.",
-    "auth/weak-password": "Password is too weak. Use at least 8 characters with mixed case and a number.",
+    "auth/weak-password": "Password is too weak. Use at least 8 characters with a lowercase letter and a number.",
     "auth/too-many-requests": "Too many attempts. Please wait a few minutes and try again.",
     "auth/network-request-failed": "Network error. Check your connection and try again.",
     "auth/operation-not-allowed": "Email/password sign-in is not enabled. Contact support.",

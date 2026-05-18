@@ -134,7 +134,7 @@ export default function AdminSignupPage() {
               type={showPassword ? "text" : "password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Min. 8 characters, mixed case & number"
+              placeholder="Min. 8 characters, lowercase & number"
               className={`${inputClassName} pr-12`}
               autoComplete="new-password"
               required
@@ -153,7 +153,7 @@ export default function AdminSignupPage() {
             </button>
           </div>
           <p className="mt-1 text-xs text-brand-black/50">
-            Use at least 8 characters with uppercase, lowercase, and a number.
+            Use at least 8 characters with a lowercase letter and a number.
           </p>
         </div>
 
