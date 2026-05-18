@@ -6,6 +6,7 @@ import FloatingButtons from "./components/FloatingButtons";
 import { CartProvider } from "./hooks/useCart";
 import { AdminAuthProvider } from "./contexts/AdminAuthContext";
 import { ProtectedAdminRoute } from "./components/admin/ProtectedAdminRoute";
+import { PublicAdminRoute } from "./components/admin/PublicAdminRoute";
 
 const HERO_CAROUSEL_IMAGES = [
   "/hero_carousal/14.png",
@@ -47,6 +48,7 @@ const ShippingPolicyPage = lazy(() => import("./pages/ShippingPolicyPage"));
 
 // Admin Pages
 const AdminLoginPage = lazy(() => import("./pages/admin/AdminLoginPage"));
+const AdminSignupPage = lazy(() => import("./pages/admin/AdminSignupPage"));
 const AdminDashboardPage = lazy(
   () => import("./pages/admin/AdminDashboardPage"),
 );
@@ -121,7 +123,22 @@ function App() {
               <Route path="/shipping-policy" element={<ShippingPolicyPage />} />
 
               {/* Admin Routes */}
-              <Route path="/admin/login" element={<AdminLoginPage />} />
+              <Route
+                path="/admin/login"
+                element={
+                  <PublicAdminRoute>
+                    <AdminLoginPage />
+                  </PublicAdminRoute>
+                }
+              />
+              <Route
+                path="/admin/signup"
+                element={
+                  <PublicAdminRoute>
+                    <AdminSignupPage />
+                  </PublicAdminRoute>
+                }
+              />
               <Route
                 path="/admin/dashboard"
                 element={

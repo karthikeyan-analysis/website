@@ -1,10 +1,16 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { Eye, EyeOff } from "lucide-react";
 import { useAdminAuth } from "../../contexts/AdminAuthContext";
+import AdminAuthShell from "../../components/admin/AdminAuthShell";
+
+const inputClassName =
+  "w-full px-4 py-3 border-2 border-brand-black/10 rounded-lg focus:outline-none focus:border-brand-navy transition bg-white";
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -27,80 +33,91 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-brand-navy via-brand-maroon to-brand-sky flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-2xl p-8 space-y-6">
-          {/* Header */}
-          <div className="text-center space-y-2">
-            <div className="flex justify-center mb-4">
-              <div className="h-14 w-14 bg-gradient-to-br from-brand-navy via-brand-maroon to-brand-sky rounded-xl flex items-center justify-center text-white font-bold text-xl">
-                KA
-              </div>
-            </div>
-            <h1 className="text-3xl font-bold text-brand-navy">Admin Login</h1>
-            <p className="text-brand-black/60">
-              Welcome to Karthikeyan Analysis Admin Panel
-            </p>
-          </div>
+    <AdminAuthShell
+      title="Admin Login"
+      subtitle="Sign in to the Karthikeyan Analysis admin panel"
+      footer={
+        <p className="text-center text-sm text-brand-black/60">
+          Need an account?{" "}
+          <Link
+            to="/admin/signup"
+            className="font-semibold text-brand-navy hover:underline"
+          >
+            Create admin account
+          </Link>
+        </p>
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+        <div>
+          <label
+            htmlFor="admin-login-email"
+            className="mb-2 block text-sm font-semibold text-brand-navy"
+          >
+            Email address
+          </label>
+          <input
+            id="admin-login-email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@example.com"
+            className={inputClassName}
+            autoComplete="email"
+            required
+          />
+        </div>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-semibold text-brand-navy mb-2">
-                Email Address
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@karthikeyan.com"
-                className="w-full px-4 py-3 border-2 border-brand-black/10 rounded-lg focus:outline-none focus:border-brand-navy transition bg-white"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-brand-navy mb-2">
-                Password
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
-                className="w-full px-4 py-3 border-2 border-brand-black/10 rounded-lg focus:outline-none focus:border-brand-navy transition bg-white"
-                required
-              />
-            </div>
-
-            {error && (
-              <div className="p-4 bg-red-50 border-2 border-red-200 rounded-lg text-red-700 text-sm font-semibold">
-                {error}
-              </div>
-            )}
-
+        <div>
+          <label
+            htmlFor="admin-login-password"
+            className="mb-2 block text-sm font-semibold text-brand-navy"
+          >
+            Password
+          </label>
+          <div className="relative">
+            <input
+              id="admin-login-password"
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password"
+              className={`${inputClassName} pr-12`}
+              autoComplete="current-password"
+              required
+            />
             <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-brand-navy via-brand-maroon to-brand-sky text-white font-bold py-3 rounded-lg transition hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-black/50 hover:text-brand-navy"
+              aria-label={showPassword ? "Hide password" : "Show password"}
             >
-              {loading ? "Logging in..." : "Login to Admin Panel"}
+              {showPassword ? (
+                <EyeOff className="h-5 w-5" />
+              ) : (
+                <Eye className="h-5 w-5" />
+              )}
             </button>
-          </form>
-
-          {/* Demo Credentials */}
-          <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 text-sm space-y-1">
-            <p className="font-semibold text-blue-900">Demo Credentials:</p>
-            <p className="text-blue-800">
-              <span className="font-semibold">Email:</span>{" "}
-              admin@karthikeyan.com
-            </p>
-            <p className="text-blue-800">
-              <span className="font-semibold">Password:</span> admin@123
-            </p>
           </div>
         </div>
-      </div>
-    </div>
+
+        {error && (
+          <div
+            role="alert"
+            className="rounded-lg border-2 border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700"
+          >
+            {error}
+          </div>
+        )}
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full rounded-lg bg-gradient-to-r from-brand-navy via-brand-maroon to-brand-sky py-3 font-bold text-white transition hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {loading ? "Signing in…" : "Sign in"}
+        </button>
+      </form>
+    </AdminAuthShell>
   );
 }

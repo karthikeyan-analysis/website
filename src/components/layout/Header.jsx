@@ -216,14 +216,14 @@ export default function Header() {
                 href="https://karthikeyananalysisstudycircle.vercel.app/login"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex min-h-9 touch-manipulation items-center justify-center gap-1.5 rounded-md bg-white/15 px-3 py-1.5 text-xs font-bold text-white ring-1 ring-white/25 transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-brand-cta"
+                className="inline-flex min-h-9 touch-manipulation items-center justify-center gap-1.5 rounded-md bg-brand-green px-3 py-1.5 text-xs font-bold text-white ring-1 ring-brand-green/60 transition animate-blink hover:bg-brand-green/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-green/50 focus-visible:ring-offset-2 focus-visible:ring-offset-brand-cta"
               >
                 Student login
                 <ExternalLink className="size-3.5 shrink-0 opacity-90" aria-hidden />
               </a>
               <Link
                 to="/book-store"
-                className="inline-flex min-h-9 touch-manipulation items-center justify-center gap-1.5 rounded-md bg-brand-purple px-3 py-1.5 text-xs font-bold text-white ring-1 ring-brand-purple/60 transition animate-blink hover:bg-brand-purple/90"
+                className="inline-flex min-h-9 touch-manipulation items-center justify-center gap-1.5 rounded-md bg-brand-orange px-3 py-1.5 text-xs font-bold text-white ring-1 ring-brand-orange/60 transition animate-blink hover:bg-brand-orange/90"
                 title="Book shop"
               >
                 <ShoppingBag className="size-4 shrink-0" aria-hidden />
@@ -332,7 +332,7 @@ export default function Header() {
                 href="https://karthikeyananalysisstudycircle.vercel.app/login"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex min-h-10 touch-manipulation items-center justify-center gap-1.5 rounded-lg bg-white/15 px-3 text-[12px] font-bold text-white ring-1 ring-white/25 transition active:bg-white/25"
+                className="flex min-h-10 touch-manipulation items-center justify-center gap-1.5 rounded-lg bg-brand-green px-3 text-[12px] font-bold text-white ring-1 ring-brand-green/60 transition animate-blink hover:bg-brand-green/90 active:bg-brand-green/80"
                 onClick={() => setMobileOpen(false)}
               >
                 <GraduationCap className="size-3.5 shrink-0" aria-hidden />
@@ -341,7 +341,7 @@ export default function Header() {
               <Link
                 to="/book-store"
                 onClick={() => setMobileOpen(false)}
-                className="flex min-h-10 touch-manipulation items-center justify-center gap-1.5 rounded-lg bg-brand-purple px-3 text-[12px] font-bold text-white ring-1 ring-brand-purple/60 transition active:opacity-80"
+                className="flex min-h-10 touch-manipulation items-center justify-center gap-1.5 rounded-lg bg-brand-orange px-3 text-[12px] font-bold text-white ring-1 ring-brand-orange/60 transition active:opacity-80"
               >
                 <ShoppingBag className="size-3.5 shrink-0" aria-hidden />
                 Book Store

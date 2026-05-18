@@ -10,6 +10,7 @@ export default {
         "brand-maroon": "#800847", // Logo Accent (Maroon)
         "brand-black": "#000000", // Secondary Text (Jet Black)
         "brand-orange": "#E65100", // Action Accent (Orange)
+        "brand-green": "#2E7D32", // Student login / success accent
         "brand-sky": "#03A9F4", // Icon Accent (Sky)
         "brand-blue": "#03A9F4", // Button Primary (Blue)
 

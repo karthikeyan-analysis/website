@@ -62,8 +62,34 @@ function getAddressLines(order) {
   return [flat];
 }
 
+function getCustomerName(order) {
+  return String(
+    order?.customerName || order?.shippingAddress?.name || "",
+  ).trim();
+}
+
+function getCustomerPhone(order) {
+  return String(
+    order?.customerPhone || order?.shippingAddress?.phone || "",
+  ).trim();
+}
+
 function getAddressClipboardText(order) {
-  return getAddressLines(order).join("\n");
+  const parts = [];
+
+  const name = getCustomerName(order);
+  if (name) parts.push(name);
+
+  const addressLines = getAddressLines(order).filter(
+    (line) =>
+      !line.startsWith("Alternate phone:") && !line.startsWith("Alt phone:"),
+  );
+  parts.push(...addressLines);
+
+  const phone = getCustomerPhone(order);
+  if (phone) parts.push(phone);
+
+  return parts.join("\n");
 }
 
 function getPlacedOnValue(order) {
