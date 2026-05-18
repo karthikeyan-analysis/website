@@ -42,7 +42,39 @@ function getAddressText(order) {
   return parts.length ? parts.join(", ") : "-";
 }
 
-function getAddressLines(order) {
+function getCustomerName(order) {
+  const shipping = order?.shippingAddress;
+  return String(
+    order?.customerName ??
+      order?.customer?.name ??
+      order?.name ??
+      shipping?.name ??
+      shipping?.fullName ??
+      "",
+  ).trim();
+}
+
+function getCustomerPhone(order) {
+  const shipping = order?.shippingAddress;
+  const raw =
+    order?.customerPhone ??
+    order?.customer?.phone ??
+    order?.phone ??
+    order?.contact ??
+    shipping?.phone ??
+    shipping?.contact ??
+    "";
+  return raw != null ? String(raw).trim() : "";
+}
+
+function getCustomerAltPhone(order) {
+  const shipping = order?.shippingAddress;
+  const raw =
+    order?.customerAltPhone ?? shipping?.altPhone ?? order?.customer?.altPhone ?? "";
+  return raw != null ? String(raw).trim() : "";
+}
+
+function getAddressOnlyLines(order) {
   const shipping = order?.shippingAddress;
   if (shipping && typeof shipping === "object") {
     const cityState = [shipping.city, shipping.state].filter(Boolean).join(", ");
@@ -53,43 +85,39 @@ function getAddressLines(order) {
       cityState,
       shipping.pincode ? `Pincode: ${shipping.pincode}` : "",
       shipping.landmark ? `Landmark: ${shipping.landmark}` : "",
-      shipping.altPhone ? `Alternate phone: ${shipping.altPhone}` : "",
-    ].filter(Boolean);
+    ]
+      .map((line) => String(line ?? "").trim())
+      .filter(Boolean);
   }
 
   const flat = String(order?.address || "").trim();
-  if (!flat) return ["-"];
-  return [flat];
+  if (!flat) return [];
+  return flat
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean);
 }
 
-function getCustomerName(order) {
-  return String(
-    order?.customerName || order?.shippingAddress?.name || "",
-  ).trim();
-}
+/** Name on top, address in the middle, phone on bottom — used for display and clipboard. */
+function getDeliveryCopyLines(order) {
+  const lines = [];
 
-function getCustomerPhone(order) {
-  return String(
-    order?.customerPhone || order?.shippingAddress?.phone || "",
-  ).trim();
+  const name = getCustomerName(order);
+  if (name) lines.push(name);
+
+  lines.push(...getAddressOnlyLines(order));
+
+  const phone = getCustomerPhone(order);
+  if (phone) lines.push(phone);
+
+  const altPhone = getCustomerAltPhone(order);
+  if (altPhone) lines.push(`Alternate phone: ${altPhone}`);
+
+  return lines.length ? lines : ["-"];
 }
 
 function getAddressClipboardText(order) {
-  const parts = [];
-
-  const name = getCustomerName(order);
-  if (name) parts.push(name);
-
-  const addressLines = getAddressLines(order).filter(
-    (line) =>
-      !line.startsWith("Alternate phone:") && !line.startsWith("Alt phone:"),
-  );
-  parts.push(...addressLines);
-
-  const phone = getCustomerPhone(order);
-  if (phone) parts.push(phone);
-
-  return parts.join("\n");
+  return getDeliveryCopyLines(order).join("\n");
 }
 
 function getPlacedOnValue(order) {
@@ -246,6 +274,7 @@ export default function AdminOrdersPage() {
   };
 
   const handleCopyAddress = async (order) => {
+    if (!order) return;
     const text = getAddressClipboardText(order);
     if (!text || text === "-") return;
     try {
@@ -610,11 +639,11 @@ export default function AdminOrdersPage() {
                     <Copy className="h-3.5 w-3.5" />
                     {copiedAddressOrderId === String(selectedOrder.id)
                       ? "Copied"
-                      : "Copy Address"}
+                      : "Copy name & address"}
                   </button>
                 </div>
                 <div className="rounded-lg bg-gray-50 p-3">
-                  {getAddressLines(selectedOrder).map((line, idx) => (
+                  {getDeliveryCopyLines(selectedOrder).map((line, idx) => (
                     <p key={`${line}-${idx}`} className="text-gray-900 font-medium leading-6">
                       {line}
                     </p>
