@@ -48,7 +48,6 @@ const ShippingPolicyPage = lazy(() => import("./pages/ShippingPolicyPage"));
 
 // Admin Pages
 const AdminLoginPage = lazy(() => import("./pages/admin/AdminLoginPage"));
-const AdminSignupPage = lazy(() => import("./pages/admin/AdminSignupPage"));
 const AdminDashboardPage = lazy(
   () => import("./pages/admin/AdminDashboardPage"),
 );
@@ -133,11 +132,7 @@ function App() {
               />
               <Route
                 path="/admin/signup"
-                element={
-                  <PublicAdminRoute>
-                    <AdminSignupPage />
-                  </PublicAdminRoute>
-                }
+                element={<Navigate to="/admin/login" replace />}
               />
               <Route
                 path="/admin/dashboard"

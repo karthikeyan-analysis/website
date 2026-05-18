@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { useAdminAuth } from "../../contexts/AdminAuthContext";
 import AdminAuthShell from "../../components/admin/AdminAuthShell";
@@ -36,17 +36,6 @@ export default function AdminLoginPage() {
     <AdminAuthShell
       title="Admin Login"
       subtitle="Sign in to the Karthikeyan Analysis admin panel"
-      footer={
-        <p className="text-center text-sm text-brand-black/60">
-          Need an account?{" "}
-          <Link
-            to="/admin/signup"
-            className="font-semibold text-brand-navy hover:underline"
-          >
-            Create admin account
-          </Link>
-        </p>
-      }
     >
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         <div>
