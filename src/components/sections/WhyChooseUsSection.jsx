@@ -66,7 +66,7 @@ const items = [
 
 export default function WhyChooseUsSection() {
   return (
-    <section className="bg-gradient-to-b from-white via-slate-50/40 to-white py-16 md:py-20">
+    <section className="bg-gradient-to-b from-white via-slate-50/40 to-white pt-6 pb-16 md:pt-8 md:pb-20">
       <Container>
         <SectionHeader
           eyebrow="Why choose Karthikeyan Analysis"

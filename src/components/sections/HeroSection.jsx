@@ -59,7 +59,7 @@ export default function HeroSection() {
         aria-hidden="true"
       />
 
-      <Container className="relative pt-4 pb-14 md:pt-6 md:pb-20 lg:pt-8 lg:pb-24">
+      <Container className="relative pt-4 pb-6 md:pt-6 md:pb-8 lg:pt-8 lg:pb-10">
         <div className="grid gap-10 md:grid-cols-2 md:items-center">
           <motion.div
             initial={{ opacity: 0, y: 18 }}
