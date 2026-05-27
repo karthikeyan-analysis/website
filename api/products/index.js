@@ -21,6 +21,34 @@ function cors(req, res) {
   return false;
 }
 
+const STOCK_STATUS = {
+  IN_STOCK: "in-stock",
+  OUT_OF_STOCK: "out-of-stock",
+  LAUNCHING_SOON: "launching-soon",
+};
+
+function normalizeStockStatus(value, legacyStock) {
+  const raw = String(value || "").trim().toLowerCase();
+  const compact = raw.replace(/[\s_]+/g, "-");
+
+  if (compact === STOCK_STATUS.IN_STOCK || compact === "instock") {
+    return STOCK_STATUS.IN_STOCK;
+  }
+  if (compact === STOCK_STATUS.OUT_OF_STOCK || compact === "outofstock") {
+    return STOCK_STATUS.OUT_OF_STOCK;
+  }
+  if (compact === STOCK_STATUS.LAUNCHING_SOON || compact === "launchingsoon") {
+    return STOCK_STATUS.LAUNCHING_SOON;
+  }
+
+  const numericStock = Number(legacyStock);
+  if (Number.isFinite(numericStock)) {
+    return numericStock > 0 ? STOCK_STATUS.IN_STOCK : STOCK_STATUS.OUT_OF_STOCK;
+  }
+
+  return STOCK_STATUS.IN_STOCK;
+}
+
 export default async function handler(req, res) {
   if (cors(req, res)) return;
 
@@ -46,6 +74,7 @@ export default async function handler(req, res) {
         image,
         images,
         stock,
+        stockStatus,
       } = req.body || {};
 
       if (!name || !String(name).trim()) {
@@ -72,11 +101,7 @@ export default async function handler(req, res) {
         res.status(400).json({ error: "Category is required" });
         return;
       }
-      const s = Number(stock);
-      if (!Number.isFinite(s) || s < 0) {
-        res.status(400).json({ error: "Valid stock quantity is required" });
-        return;
-      }
+      const normalizedStockStatus = normalizeStockStatus(stockStatus, stock);
       if (!description || !String(description).trim()) {
         res.status(400).json({ error: "Description is required" });
         return;
@@ -96,7 +121,8 @@ export default async function handler(req, res) {
         description: String(description).trim(),
         image: primaryImage,
         images: primaryImage ? [primaryImage, ...normalizedImages.filter((url) => url !== primaryImage)] : normalizedImages,
-        stock: Math.trunc(s),
+        stockStatus: normalizedStockStatus,
+        stock: normalizedStockStatus === STOCK_STATUS.IN_STOCK ? 1 : 0,
         createdAt: now,
         updatedAt: now,
       };

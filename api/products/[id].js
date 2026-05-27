@@ -21,6 +21,34 @@ function cors(req, res) {
   return false;
 }
 
+const STOCK_STATUS = {
+  IN_STOCK: "in-stock",
+  OUT_OF_STOCK: "out-of-stock",
+  LAUNCHING_SOON: "launching-soon",
+};
+
+function normalizeStockStatus(value, legacyStock) {
+  const raw = String(value || "").trim().toLowerCase();
+  const compact = raw.replace(/[\s_]+/g, "-");
+
+  if (compact === STOCK_STATUS.IN_STOCK || compact === "instock") {
+    return STOCK_STATUS.IN_STOCK;
+  }
+  if (compact === STOCK_STATUS.OUT_OF_STOCK || compact === "outofstock") {
+    return STOCK_STATUS.OUT_OF_STOCK;
+  }
+  if (compact === STOCK_STATUS.LAUNCHING_SOON || compact === "launchingsoon") {
+    return STOCK_STATUS.LAUNCHING_SOON;
+  }
+
+  const numericStock = Number(legacyStock);
+  if (Number.isFinite(numericStock)) {
+    return numericStock > 0 ? STOCK_STATUS.IN_STOCK : STOCK_STATUS.OUT_OF_STOCK;
+  }
+
+  return STOCK_STATUS.IN_STOCK;
+}
+
 export default async function handler(req, res) {
   if (cors(req, res)) return;
 
@@ -46,8 +74,18 @@ export default async function handler(req, res) {
 
     if (req.method === "PUT") {
       const body = req.body || {};
+      const normalizedStockStatus =
+        "stockStatus" in body || "stock" in body
+          ? normalizeStockStatus(body.stockStatus, body.stock)
+          : null;
       const update = {
         ...body,
+        ...(normalizedStockStatus
+          ? {
+              stockStatus: normalizedStockStatus,
+              stock: normalizedStockStatus === STOCK_STATUS.IN_STOCK ? 1 : 0,
+            }
+          : {}),
         updatedAt: new Date(),
       };
       await ref.set(update, { merge: true });

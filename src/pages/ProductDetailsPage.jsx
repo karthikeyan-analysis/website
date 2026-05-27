@@ -7,6 +7,12 @@ import Card from "../components/ui/Card";
 import Container from "../components/ui/Container";
 import { useCart } from "../hooks/useCart";
 import { productsService } from "../services/firebaseService";
+import {
+  STOCK_STATUS,
+  getStockStatusLabel,
+  isPurchasableStockStatus,
+  normalizeStockStatus,
+} from "../utils/stockStatus";
 
 function formatDate(value) {
   if (!value) return "";
@@ -128,6 +134,15 @@ export default function ProductDetailsPage() {
   const mrp = Number(product?.mrpPrice) || 0;
   const hasDiscount = mrp > selling && selling > 0;
   const discountPct = hasDiscount ? Math.round(((mrp - selling) / mrp) * 100) : 0;
+  const stockStatus = normalizeStockStatus(product?.stockStatus, product?.stock);
+  const stockStatusLabel = getStockStatusLabel(stockStatus);
+  const canAddToCart = isPurchasableStockStatus(stockStatus);
+  const cartButtonLabel =
+    stockStatus === STOCK_STATUS.LAUNCHING_SOON
+      ? "Launching Soon"
+      : canAddToCart
+        ? "Add to Cart"
+        : "Out of Stock";
 
   return (
     <PageLayout
@@ -226,20 +241,16 @@ export default function ProductDetailsPage() {
 
                       <div className="mt-4">
                         <Button
-                          disabled={Number(product.stock || 0) <= 0}
-                          onClick={() =>
-                            Number(product.stock || 0) > 0 && addToCart(product)
-                          }
+                          disabled={!canAddToCart}
+                          onClick={() => canAddToCart && addToCart(product)}
                           className="w-full"
                         >
-                          {Number(product.stock || 0) > 0
-                            ? "Add to Cart"
-                            : "Out of stock"}
+                          {cartButtonLabel}
                         </Button>
                       </div>
 
                       <p className="mt-3 text-xs text-brand-black/55">
-                        Stock: {product.stock ?? 0}
+                        Availability: {stockStatusLabel}
                       </p>
                     </div>
                   </Card>

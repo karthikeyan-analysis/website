@@ -14,6 +14,12 @@ import {
   productsService,
   categoriesService,
 } from "../../services/firebaseService";
+import {
+  STOCK_STATUS,
+  STOCK_STATUS_OPTIONS,
+  getStockStatusLabel,
+  normalizeStockStatus,
+} from "../../utils/stockStatus";
 
 function newGalleryRowId() {
   return crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -77,7 +83,7 @@ export default function AdminProductsPage() {
     category: "",
     description: "",
     image: "",
-    stock: "",
+    stockStatus: STOCK_STATUS.IN_STOCK,
   });
   const [galleryRows, setGalleryRows] = useState([]);
   const [errors, setErrors] = useState({});
@@ -127,8 +133,8 @@ export default function AdminProductsPage() {
       }
     }
     if (!formData.categoryId) newErrors.categoryId = "Category is required";
-    if (!formData.stock || formData.stock < 0)
-      newErrors.stock = "Valid stock quantity is required";
+    if (!formData.stockStatus)
+      newErrors.stockStatus = "Stock status is required";
     if (!formData.description.trim())
       newErrors.description = "Description is required";
     return newErrors;
@@ -174,7 +180,8 @@ export default function AdminProductsPage() {
         description: formData.description.trim(),
         image: finalImages[0] || "",
         images: finalImages,
-        stock: parseInt(formData.stock),
+        stockStatus: normalizeStockStatus(formData.stockStatus),
+        stock: formData.stockStatus === STOCK_STATUS.IN_STOCK ? 1 : 0,
       };
 
       if (editingId) {
@@ -211,7 +218,7 @@ export default function AdminProductsPage() {
       category: product.category || "",
       description: product.description,
       image: product.image || "",
-      stock: product.stock,
+      stockStatus: normalizeStockStatus(product.stockStatus, product.stock),
     });
     setGalleryRows((prev) => {
       revokeGalleryBlobs(prev);
@@ -256,7 +263,7 @@ export default function AdminProductsPage() {
       category: "",
       description: "",
       image: "",
-      stock: "",
+      stockStatus: STOCK_STATUS.IN_STOCK,
     });
     setGalleryRows((prev) => {
       revokeGalleryBlobs(prev);
@@ -450,21 +457,27 @@ export default function AdminProductsPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-brand-black/80">
-                    Stock Quantity *
+                    Stock Status *
                   </label>
-                  <input
-                    type="number"
-                    value={formData.stock}
+                  <select
+                    value={formData.stockStatus}
                     onChange={(e) =>
-                      setFormData({ ...formData, stock: e.target.value })
+                      setFormData({ ...formData, stockStatus: e.target.value })
                     }
                     className={`mt-1 w-full rounded-lg border ${
-                      errors.stock ? "border-red-500" : "border-black/10"
+                      errors.stockStatus ? "border-red-500" : "border-black/10"
                     } px-4 py-2 transition focus:border-brand-navy focus:outline-none`}
-                    placeholder="0"
-                  />
-                  {errors.stock && (
-                    <p className="mt-1 text-sm text-red-500">{errors.stock}</p>
+                  >
+                    {STOCK_STATUS_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.stockStatus && (
+                    <p className="mt-1 text-sm text-red-500">
+                      {errors.stockStatus}
+                    </p>
                   )}
                 </div>
               </div>
@@ -630,7 +643,7 @@ export default function AdminProductsPage() {
                     Price
                   </th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-brand-black">
-                    Stock
+                    Stock Status
                   </th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-brand-black">
                     Actions
@@ -653,7 +666,7 @@ export default function AdminProductsPage() {
                       ₹{parseFloat(product.price).toFixed(2)}
                     </td>
                     <td className="px-6 py-4 text-sm text-brand-black">
-                      {product.stock}
+                      {getStockStatusLabel(product.stockStatus, product.stock)}
                     </td>
                     <td className="px-6 py-4 text-sm">
                       <div className="flex gap-2">

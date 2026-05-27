@@ -10,6 +10,12 @@ import {
   categoriesService,
   productsService,
 } from "../services/firebaseService";
+import {
+  STOCK_STATUS,
+  getStockStatusLabel,
+  isPurchasableStockStatus,
+  normalizeStockStatus,
+} from "../utils/stockStatus";
 
 function productCoverImageUrl(product) {
   const listed = Array.isArray(product?.images)
@@ -132,6 +138,18 @@ export default function BookStorePage() {
               <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
                 {filteredProducts.map((product) => {
                   const coverSrc = productCoverImageUrl(product);
+                  const stockStatus = normalizeStockStatus(
+                    product.stockStatus,
+                    product.stock,
+                  );
+                  const stockStatusLabel = getStockStatusLabel(stockStatus);
+                  const canAddToCart = isPurchasableStockStatus(stockStatus);
+                  const cartButtonLabel =
+                    stockStatus === STOCK_STATUS.LAUNCHING_SOON
+                      ? "Launching Soon"
+                      : canAddToCart
+                        ? "Add to Cart"
+                        : "Out of Stock";
                   return (
                   <article
                     key={product.id}
@@ -205,18 +223,22 @@ export default function BookStorePage() {
                     <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-brand-navy/70">
                       Tap to view details
                     </p>
+                    <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-brand-purple">
+                      {stockStatusLabel}
+                    </p>
 
                     <div className="mt-4">
                       <Button
                         type="button"
                         className="w-full"
+                        disabled={!canAddToCart}
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          addToCart(product);
+                          if (canAddToCart) addToCart(product);
                         }}
                       >
-                        Add to Cart
+                        {cartButtonLabel}
                       </Button>
                     </div>
                   </article>
