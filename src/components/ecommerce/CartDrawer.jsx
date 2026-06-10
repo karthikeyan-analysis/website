@@ -3,7 +3,7 @@ import { Minus, Plus, ShoppingBag, X } from 'lucide-react'
 import { useCart } from '../../hooks/useCart'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ordersService, paymentsService } from '../../services/firebaseService'
+import { paymentsService } from '../../services/firebaseService'
 
 function formatMoney(value) {
   const n = Number(value || 0)
@@ -121,52 +121,30 @@ export default function CartDrawer() {
           try {
             setLoading(true)
 
-            const orderId = `KA-${Date.now()}`
-            const orderRecord = await ordersService.createOrder({
-              id: orderId,
-              provider: 'razorpay',
-              razorpay_order_id: response?.razorpay_order_id || orderRes?.order?.id || '',
-              razorpay_payment_id: response?.razorpay_payment_id || '',
-              razorpay_signature: response?.razorpay_signature || '',
-              customerName: customer.name.trim(),
-              customerEmail: customer.email.trim().toLowerCase(),
-              customerPhone: customer.phone.trim(),
-              customerAltPhone: customer.altPhone.trim(),
-              items: items.map((i) => ({
-                id: i.id,
+            const verifyResult = await paymentsService.verifyRazorpayPayment({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              customer: {
+                name: customer.name.trim(),
+                email: customer.email.trim().toLowerCase(),
+                phone: customer.phone.trim(),
+              },
+              cart: items.map((i) => ({
                 name: i.name,
-                image: i.image || '',
-                qty: Number(i.qty || 0),
+                quantity: Number(i.qty || 0),
                 price: Number(i.price || 0),
               })),
-              total: Number(amount),
               address: formatAddressForStorage(),
-              shippingAddress: {
-                addressLine1: customer.addressLine1.trim(),
-                addressLine2: customer.addressLine2.trim(),
-                area: customer.area.trim(),
-                city: customer.city.trim(),
-                state: customer.state.trim(),
-                pincode: customer.pincode.trim(),
-                landmark: customer.landmark.trim(),
-                altPhone: customer.altPhone.trim(),
-              },
-              status: 'Paid',
-              paymentStatus: 'Success',
+              total: Number(amount),
             })
-
-            // Best-effort email notification via backend Nodemailer endpoint.
-            const emailResult = await ordersService.sendOrderConfirmationEmail(orderRecord)
-            if (emailResult?.emailSent === false) {
-              console.warn("Order confirmation email not sent:", emailResult)
-            }
 
             clearCart()
             setIsOpen(false)
             setStep('cart')
-            navigate(`/order-placed/${orderRecord.id}`)
+            navigate(`/order-placed/${verifyResult.orderId}`)
           } catch (e) {
-            setError(e?.message || 'Payment completed, but order save failed. Please contact support.')
+            setError(e?.message || 'Payment completed, but order save failed. Please contact support with your Razorpay payment ID.')
             setStep('checkout')
           } finally {
             setLoading(false)

@@ -183,25 +183,35 @@ export default async function handler(req, res) {
 
     await ref.set(record);
 
-    await Promise.all([
-      sendOrderConfirmationEmail({
-        orderId,
-        customerName,
-        customerEmail,
-        items,
-        total: orderTotal,
-      }),
-      sendAdminOrderEmail({
-        orderId,
-        customerName,
-        customerEmail,
-        items,
-        total: orderTotal,
-        address: address || "",
-      }),
-    ]);
+    let emailError = null;
+    try {
+      await Promise.all([
+        sendOrderConfirmationEmail({
+          orderId,
+          customerName,
+          customerEmail,
+          items,
+          total: orderTotal,
+        }),
+        sendAdminOrderEmail({
+          orderId,
+          customerName,
+          customerEmail,
+          items,
+          total: orderTotal,
+          address: address || "",
+        }),
+      ]);
+    } catch (emailErr) {
+      console.error("Order emails failed (order was saved successfully):", orderId, emailErr);
+      emailError = emailErr.message;
+    }
 
-    res.status(200).json({ success: true, orderId });
+    res.status(200).json({
+      success: true,
+      orderId,
+      ...(emailError ? { emailWarning: "Order saved but email delivery failed: " + emailError } : {}),
+    });
   } catch (error) {
     console.error("Razorpay verify error:", error);
     res.status(500).json({ error: error.message || "Internal Server Error" });
