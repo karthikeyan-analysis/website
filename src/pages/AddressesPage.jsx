@@ -243,9 +243,9 @@ export default function AddressesPage() {
 
       {/* Address form modal */}
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 sm:items-center">
-          <div className="max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white shadow-2xl">
-            <div className="sticky top-0 flex items-center justify-between border-b border-black/[0.07] bg-white px-6 py-4">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4">
+          <div className="max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl">
+            <div className="sticky top-0 flex items-center justify-between border-b border-black/[0.07] bg-white px-5 py-4 sm:px-6">
               <h2 className="text-base font-bold text-slate-800">
                 {editId ? "Edit Address" : "Add New Address"}
               </h2>
@@ -254,7 +254,7 @@ export default function AddressesPage() {
               </button>
             </div>
 
-            <form onSubmit={handleSave} className="p-6 space-y-4">
+            <form onSubmit={handleSave} className="space-y-4 p-5 sm:p-6">
               {formError && (
                 <div className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
                   {formError}

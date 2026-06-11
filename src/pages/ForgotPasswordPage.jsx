@@ -39,7 +39,7 @@ export default function ForgotPasswordPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-black/[0.07] bg-white p-8 shadow-[0_4px_24px_rgba(0,0,0,0.08)]">
+        <div className="rounded-2xl border border-black/[0.07] bg-white p-5 shadow-[0_4px_24px_rgba(0,0,0,0.08)] sm:p-8">
           {sent ? (
             <div className="space-y-4 text-center">
               <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100">

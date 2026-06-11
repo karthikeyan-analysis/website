@@ -60,7 +60,7 @@ export default function SignupPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-black/[0.07] bg-white p-8 shadow-[0_4px_24px_rgba(0,0,0,0.08)]">
+        <div className="rounded-2xl border border-black/[0.07] bg-white p-5 shadow-[0_4px_24px_rgba(0,0,0,0.08)] sm:p-8">
           {error && (
             <div className="mb-5 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
               {error}

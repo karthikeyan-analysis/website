@@ -105,14 +105,14 @@ export default function ProfilePage() {
           <AccountNav active="Profile" />
 
           {/* Profile info */}
-          <div className="rounded-2xl border border-black/[0.07] bg-white p-6 shadow-sm">
+          <div className="rounded-2xl border border-black/[0.07] bg-white p-5 shadow-sm sm:p-6">
             <div className="mb-5 flex items-center gap-4">
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-brand-navy text-xl font-bold text-white">
                 {(userProfile?.name || user?.email || "U")[0].toUpperCase()}
               </div>
-              <div>
-                <p className="font-bold text-slate-800">{userProfile?.name || "—"}</p>
-                <p className="text-sm text-slate-500">{user?.email}</p>
+              <div className="min-w-0">
+                <p className="truncate font-bold text-slate-800">{userProfile?.name || "—"}</p>
+                <p className="truncate text-sm text-slate-500">{user?.email}</p>
               </div>
             </div>
 
@@ -169,7 +169,7 @@ export default function ProfilePage() {
 
           {/* Change password — only for email/password users */}
           {!isGoogleUser && (
-            <div className="mt-6 rounded-2xl border border-black/[0.07] bg-white p-6 shadow-sm">
+            <div className="mt-6 rounded-2xl border border-black/[0.07] bg-white p-5 shadow-sm sm:p-6">
               <h2 className="mb-4 text-base font-bold text-slate-800">Change Password</h2>
 
               {passMsg && (

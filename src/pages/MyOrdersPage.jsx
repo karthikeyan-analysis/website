@@ -84,7 +84,7 @@ function OrderCard({ order }) {
       >
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">
+            <span className="max-w-[160px] truncate text-xs font-bold text-slate-400 uppercase tracking-wide sm:max-w-none">
               Order #{order.id}
             </span>
             <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS_COLORS[statusKey] || "bg-slate-100 text-slate-600"}`}>
@@ -143,14 +143,14 @@ function OrderCard({ order }) {
           {/* Tracking ID + Tracker */}
           {order.trackingId && (
             <div>
-              <div className="flex items-center justify-between gap-3">
-                <div>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="min-w-0">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">ST Courier Tracking</p>
-                  <p className="mt-0.5 text-sm font-bold text-slate-700">AWB: {order.trackingId}</p>
+                  <p className="mt-0.5 break-all text-sm font-bold text-slate-700">AWB: {order.trackingId}</p>
                 </div>
                 <button
                   onClick={() => setShowTracking((p) => !p)}
-                  className="flex items-center gap-1.5 rounded-xl bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 transition hover:bg-blue-100"
+                  className="flex shrink-0 items-center gap-1.5 rounded-xl bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 transition hover:bg-blue-100 active:scale-[0.98]"
                 >
                   <Truck className="h-3.5 w-3.5" />
                   {showTracking ? "Hide" : "Track Shipment"}

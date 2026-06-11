@@ -1,5 +1,9 @@
 import { load } from "cheerio";
 
+const ST_BASE = "https://stcourier.com";
+const BROWSER_UA =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
+
 function setCors(res) {
   res.setHeader("Access-Control-Allow-Credentials", "true");
   res.setHeader("Access-Control-Allow-Origin", process.env.FRONTEND_URL || "*");
@@ -10,160 +14,263 @@ function setCors(res) {
   );
 }
 
+// Build a cookie string from the raw Set-Cookie header(s)
+function parseCookies(setCookieHeader) {
+  if (!setCookieHeader) return "";
+  // Vercel fetch gives a single string; split on ", " between cookies but not within expires values
+  const parts = setCookieHeader.split(/,(?=[^ ])/);
+  return parts.map((p) => p.split(";")[0].trim()).join("; ");
+}
+
 export default async function handler(req, res) {
   setCors(res);
   if (req.method === "OPTIONS") return res.status(200).end();
-  if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
+  if (req.method !== "GET")
+    return res.status(405).json({ error: "Method not allowed" });
 
   const awb = String(req.query.awb || "").trim();
   if (!awb) return res.status(400).json({ error: "AWB number is required" });
 
   try {
-    const formData = new FormData();
-    formData.append("awb_no", awb);
+    // ── Step 1: Load the tracking page to capture session cookies + CSRF token ──
+    let cookies = "";
+    let csrfToken = "";
 
-    const response = await fetch("https://stcourier.com/track/doCheck", {
-      method: "POST",
-      body: formData,
-      headers: {
-        "X-Requested-With": "XMLHttpRequest",
-        Origin: "https://stcourier.com",
-        Referer: "https://stcourier.com/track/shipment",
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9",
-      },
-    });
-
-    if (!response.ok) {
-      return res.status(502).json({ error: "Tracking service unavailable. Please try again later." });
+    try {
+      const pageResp = await fetch(`${ST_BASE}/track/shipment`, {
+        headers: {
+          "User-Agent": BROWSER_UA,
+          Accept:
+            "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+          "Accept-Language": "en-US,en;q=0.5",
+          "Upgrade-Insecure-Requests": "1",
+        },
+        redirect: "follow",
+      });
+      cookies = parseCookies(pageResp.headers.get("set-cookie"));
+      const html = await pageResp.text();
+      const $p = load(html);
+      csrfToken =
+        $p('meta[name="csrf-token"]').attr("content") ||
+        $p('input[name="_token"]').val() ||
+        "";
+    } catch {
+      // proceed without session — some hosts allow stateless POSTs
     }
 
-    const html = await response.text();
+    // ── Step 2: POST the AWB to doCheck (url-encoded, not multipart) ──
+    const body = new URLSearchParams();
+    body.append("awb_no", awb);
+    if (csrfToken) body.append("_token", csrfToken);
 
-    if (!html || html.trim().length < 50) {
-      return res.status(404).json({ error: "No tracking information found for this AWB number." });
+    const postHeaders = {
+      "User-Agent": BROWSER_UA,
+      "Content-Type": "application/x-www-form-urlencoded",
+      Accept:
+        "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+      "Accept-Language": "en-US,en;q=0.5",
+      Origin: ST_BASE,
+      Referer: `${ST_BASE}/track/shipment`,
+      "Upgrade-Insecure-Requests": "1",
+    };
+    if (cookies) postHeaders["Cookie"] = cookies;
+
+    const trackResp = await fetch(`${ST_BASE}/track/doCheck`, {
+      method: "POST",
+      headers: postHeaders,
+      body: body.toString(),
+      redirect: "follow",
+    });
+
+    if (!trackResp.ok) {
+      return res
+        .status(502)
+        .json({ error: "Tracking service unavailable. Please try again later." });
+    }
+
+    const html = await trackResp.text();
+
+    if (!html || html.trim().length < 30) {
+      return res
+        .status(404)
+        .json({ error: "No tracking information found for this AWB number." });
     }
 
     const $ = load(html);
+    const bodyText = $("body").text();
 
-    // Check for "no records found" type messages
-    const bodyText = $("body").text().toLowerCase();
+    // Reject obvious "not found" responses
+    const lower = bodyText.toLowerCase();
     if (
-      bodyText.includes("no records found") ||
-      bodyText.includes("invalid awb") ||
-      bodyText.includes("not found")
+      lower.includes("no records found") ||
+      lower.includes("invalid awb") ||
+      lower.includes("awb not found") ||
+      (lower.includes("not found") && lower.length < 300)
     ) {
-      return res.status(404).json({ error: "No tracking information found for this AWB number." });
+      return res
+        .status(404)
+        .json({ error: "No tracking information found for this AWB number." });
     }
 
-    // Extract summary table (current status, origin, destination, etc.)
+    // ── Step 3: Parse the summary table (key → value rows) ──
     const summary = {};
-    $("table tr, .tracking-summary tr, .status-table tr").each((_, row) => {
-      const cells = $(row).find("td");
-      if (cells.length >= 2) {
-        const key = $(cells[0]).text().trim().toLowerCase().replace(/\s+/g, "_");
-        const value = $(cells[1]).text().trim();
-        if (key && value) summary[key] = value;
-      }
+
+    $("table").each((_, tbl) => {
+      $(tbl)
+        .find("tr")
+        .each((_, row) => {
+          const tds = $(row).find("td");
+          if (tds.length >= 2) {
+            const key = $(tds[0])
+              .text()
+              .trim()
+              .replace(/[:\s]+$/, "")
+              .toLowerCase()
+              .replace(/[\s/]+/g, "_");
+            const val = $(tds[1]).text().trim();
+            if (key && val) summary[key] = val;
+          }
+          // th + td pairs
+          const ths = $(row).find("th");
+          const tds2 = $(row).find("td");
+          if (ths.length && tds2.length) {
+            const key = $(ths[0])
+              .text()
+              .trim()
+              .toLowerCase()
+              .replace(/[\s/]+/g, "_");
+            const val = $(tds2[0]).text().trim();
+            if (key && val) summary[key] = val;
+          }
+        });
     });
 
-    // Also try th/td pairs
-    $("table").each((_, table) => {
-      $(table).find("tr").each((_, row) => {
-        const th = $(row).find("th").first().text().trim();
-        const td = $(row).find("td").first().text().trim();
-        if (th && td) {
-          const k = th.toLowerCase().replace(/\s+/g, "_");
-          summary[k] = td;
-        }
-      });
-    });
-
-    // Extract timeline events — look for rows with date/time/status/location patterns
+    // ── Step 4: Parse tracking event rows ──
     const events = [];
+    const dateRe = /[A-Z][a-z]{2}\s+\d{1,2},\s+\d{4}/;
+    const timeRe = /\d{1,2}:\d{2}\s*[AP]M/i;
 
-    // Strategy 1: Look for rows with date patterns like "Jun 09, 2026"
-    const datePattern = /[A-Z][a-z]{2}\s+\d{1,2},\s+\d{4}/;
-    const timePattern = /\d{1,2}:\d{2}\s*[AP]M/i;
+    // First pass: look for <tr> elements that contain a date pattern
+    $("table tr").each((_, row) => {
+      const rowText = $(row).text();
+      if (!dateRe.test(rowText)) return;
 
-    $("tr, .tracking-row, .event-row, .step").each((_, el) => {
-      const text = $(el).text();
-      if (!datePattern.test(text)) return;
+      const tds = $(row).find("td");
+      if (tds.length === 0) return;
 
-      const tds = $(el).find("td, div, span").toArray();
-      const allTexts = tds.map((t) => $(t).text().trim()).filter(Boolean);
+      // Collect all non-empty cell texts
+      const cells = tds
+        .toArray()
+        .map((td) => $(td).text().replace(/\s+/g, " ").trim())
+        .filter(Boolean);
 
-      // Find date, time, status, location from cell texts
-      let date = "";
-      let time = "";
-      let status = "";
-      let location = "";
+      let date = "",
+        time = "",
+        status = "",
+        location = "";
 
-      for (const t of allTexts) {
-        if (!date && datePattern.test(t)) date = t.match(datePattern)?.[0] || "";
-        if (!time && timePattern.test(t)) time = t.match(timePattern)?.[0] || "";
-        if (!status && !datePattern.test(t) && !timePattern.test(t) && t.length > 3 && t.length < 80) {
-          status = t;
+      // Extract date and time from any cell
+      for (const c of cells) {
+        if (!date) {
+          const m = c.match(dateRe);
+          if (m) date = m[0];
         }
-        if (status && !location && !datePattern.test(t) && !timePattern.test(t) && t !== status && t.length > 3) {
-          location = t;
+        if (!time) {
+          const m = c.match(timeRe);
+          if (m) time = m[0];
         }
       }
 
-      // Fallback: split full row text
-      if (!date || !status) {
-        const full = $(el).text().replace(/\s+/g, " ").trim();
-        const dateMatch = full.match(datePattern);
-        const timeMatch = full.match(timePattern);
-        if (dateMatch) date = dateMatch[0];
-        if (timeMatch) time = timeMatch[0];
+      // Remaining cells become status then location
+      for (const c of cells) {
+        if (dateRe.test(c) || timeRe.test(c)) continue;
+        if (!status && c.length > 2) {
+          status = c.slice(0, 120);
+        } else if (!location && c.length > 2 && c !== status) {
+          location = c.slice(0, 80);
+        }
       }
 
-      if (date && status) {
+      // Some rows put date+time in a single cell like "Jun 09, 2026\n07:25 PM"
+      if (date) {
         events.push({ date, time, status, location });
       }
     });
 
-    // Strategy 2: If no events found, try parsing structured divs
+    // Second pass: if table parsing yielded nothing, walk text lines
     if (events.length === 0) {
-      $("[class*='track'], [class*='event'], [class*='status'], [class*='timeline']").each((_, el) => {
-        const text = $(el).text().replace(/\s+/g, " ").trim();
-        if (!datePattern.test(text)) return;
-        const dateMatch = text.match(datePattern);
-        const timeMatch = text.match(timePattern);
-        if (dateMatch) {
-          events.push({
-            date: dateMatch[0],
-            time: timeMatch?.[0] || "",
-            status: text.replace(dateMatch[0], "").replace(timeMatch?.[0] || "", "").trim().slice(0, 80),
-            location: "",
-          });
+      const lines = bodyText
+        .split("\n")
+        .map((l) => l.trim())
+        .filter(Boolean);
+
+      for (let i = 0; i < lines.length; i++) {
+        const dateMatch = lines[i].match(dateRe);
+        if (!dateMatch) continue;
+
+        const date = dateMatch[0];
+        const timeMatch =
+          lines[i].match(timeRe) ||
+          (lines[i + 1] ? lines[i + 1].match(timeRe) : null);
+        const time = timeMatch ? timeMatch[0] : "";
+
+        // Next non-date, non-time lines are status / location
+        let status = "",
+          location = "";
+        for (let j = i + 1; j < Math.min(i + 5, lines.length); j++) {
+          const l = lines[j];
+          if (dateRe.test(l) || timeRe.test(l)) break;
+          if (!status) status = l.slice(0, 120);
+          else if (!location) {
+            location = l.slice(0, 80);
+            break;
+          }
         }
-      });
+
+        events.push({ date, time, status, location });
+      }
     }
 
-    // Build result from what we parsed
+    // ── Step 5: Build the response ──
+    const currentStatus =
+      summary["current_status"] ||
+      summary["status"] ||
+      summary["delivery_status"] ||
+      (events[0]?.status ?? "");
+
     const result = {
       awb,
-      currentStatus: summary["current_status"] || summary["status"] || "",
-      originSrc: summary["orgin_src"] || summary["origin_src"] || summary["origin"] || "",
+      currentStatus,
+      originSrc:
+        summary["orgin_src"] ||
+        summary["origin_src"] ||
+        summary["origin"] ||
+        "",
       destination: summary["destination"] || "",
       consignment: summary["consignment"] || "",
-      bookDate: summary["book_date/time"] || summary["book_date"] || summary["booking_date"] || "",
-      deliveryDate: summary["delivery_date/time"] || summary["delivery_date"] || "",
+      bookDate:
+        summary["book_date_time"] ||
+        summary["book_date"] ||
+        summary["booking_date"] ||
+        "",
+      deliveryDate:
+        summary["delivery_date_time"] ||
+        summary["delivery_date"] ||
+        "",
       events: events.slice(0, 20),
-      rawSummary: summary,
     };
 
-    if (!result.currentStatus && events.length === 0) {
-      return res.status(404).json({ error: "No tracking information found for this AWB number." });
+    if (!result.currentStatus && result.events.length === 0) {
+      return res
+        .status(404)
+        .json({ error: "No tracking information found for this AWB number." });
     }
 
     return res.status(200).json(result);
   } catch (err) {
     console.error("Track API error:", err);
-    return res.status(500).json({ error: "Failed to fetch tracking data. Please try again." });
+    return res
+      .status(500)
+      .json({ error: "Failed to fetch tracking data. Please try again." });
   }
 }

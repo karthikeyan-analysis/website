@@ -46,12 +46,12 @@ export default function WishlistPage() {
 
   return (
     <PageLayout title="My Wishlist" subtitle="Products you've saved for later">
-      <section className="py-10">
+      <section className="py-8 sm:py-10">
         <div className="mx-auto max-w-2xl px-4">
           <AccountNav active="Wishlist" />
 
           {wishlistItems.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-black/10 bg-white p-12 text-center">
+            <div className="rounded-2xl border border-dashed border-black/10 bg-white p-10 text-center sm:p-12">
               <Heart className="mx-auto h-12 w-12 text-slate-200" />
               <p className="mt-3 text-base font-semibold text-slate-500">Your wishlist is empty</p>
               <p className="mt-1 text-sm text-slate-400">
@@ -67,71 +67,76 @@ export default function WishlistPage() {
             </div>
           ) : (
             <div className="space-y-3">
+              <p className="text-sm text-slate-500">{wishlistItems.length} item{wishlistItems.length !== 1 ? "s" : ""}</p>
               {wishlistItems.map((item) => (
                 <div
                   key={item.id}
-                  className="flex gap-4 rounded-2xl border border-black/[0.07] bg-white p-4 shadow-sm"
+                  className="rounded-2xl border border-black/[0.07] bg-white p-4 shadow-sm"
                 >
-                  <Link to={`/book-store/${item.id}`} className="shrink-0">
-                    <div className="h-20 w-20 overflow-hidden rounded-xl border border-black/[0.07] bg-slate-50">
-                      {item.image ? (
-                        <img
-                          src={item.image}
-                          alt={item.name}
-                          className="h-full w-full object-cover"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-[10px] text-slate-400">
-                          No image
-                        </div>
-                      )}
-                    </div>
-                  </Link>
-
-                  <div className="min-w-0 flex-1">
-                    <Link
-                      to={`/book-store/${item.id}`}
-                      className="block truncate text-sm font-bold text-brand-navy hover:underline"
-                    >
-                      {item.name}
+                  {/* Top row: image + product info */}
+                  <div className="flex gap-3">
+                    <Link to={`/book-store/${item.id}`} className="shrink-0">
+                      <div className="h-16 w-16 overflow-hidden rounded-xl border border-black/[0.07] bg-slate-50 sm:h-20 sm:w-20">
+                        {item.image ? (
+                          <img
+                            src={item.image}
+                            alt={item.name}
+                            className="h-full w-full object-cover"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-[10px] text-slate-400">
+                            No image
+                          </div>
+                        )}
+                      </div>
                     </Link>
-                    {item.category && (
-                      <p className="mt-0.5 text-xs text-slate-400">{item.category}</p>
-                    )}
-                    <div className="mt-1.5 flex items-baseline gap-2">
-                      <span className="text-sm font-bold text-slate-800">
-                        ₹{formatMoney(item.price)}
-                      </span>
-                      {item.mrpPrice && item.mrpPrice > item.price && (
-                        <span className="text-xs text-slate-400 line-through">
-                          ₹{formatMoney(item.mrpPrice)}
+
+                    <div className="min-w-0 flex-1">
+                      <Link
+                        to={`/book-store/${item.id}`}
+                        className="line-clamp-2 text-sm font-bold text-brand-navy hover:underline"
+                      >
+                        {item.name}
+                      </Link>
+                      {item.category && (
+                        <p className="mt-0.5 text-xs text-slate-400">{item.category}</p>
+                      )}
+                      <div className="mt-1.5 flex flex-wrap items-baseline gap-2">
+                        <span className="text-sm font-bold text-slate-800">
+                          ₹{formatMoney(item.price)}
                         </span>
+                        {item.mrpPrice && item.mrpPrice > item.price && (
+                          <span className="text-xs text-slate-400 line-through">
+                            ₹{formatMoney(item.mrpPrice)}
+                          </span>
+                        )}
+                      </div>
+                      {item.stockStatus && (
+                        <p className={`mt-0.5 text-xs font-semibold ${
+                          String(item.stockStatus).toLowerCase().includes("out") ? "text-red-500" : "text-green-600"
+                        }`}>
+                          {item.stockStatus}
+                        </p>
                       )}
                     </div>
-                    {item.stockStatus && (
-                      <p className={`mt-0.5 text-xs font-semibold ${
-                        String(item.stockStatus).toLowerCase().includes("out") ? "text-red-500" : "text-green-600"
-                      }`}>
-                        {item.stockStatus}
-                      </p>
-                    )}
                   </div>
 
-                  <div className="flex shrink-0 flex-col gap-2">
+                  {/* Bottom row: action buttons */}
+                  <div className="mt-3 flex gap-2">
                     <button
                       onClick={() => handleMoveToCart(item)}
-                      className="flex items-center gap-1.5 rounded-xl bg-brand-navy px-3 py-2 text-xs font-bold text-white transition hover:bg-brand-navy/90"
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-brand-navy px-3 py-2.5 text-xs font-bold text-white transition hover:bg-brand-navy/90 active:scale-[0.98]"
                     >
-                      <ShoppingCart className="h-3.5 w-3.5" />
+                      <ShoppingCart className="h-3.5 w-3.5 shrink-0" />
                       Add to Cart
                     </button>
                     <button
                       onClick={() => removeFromWishlist(item.id)}
-                      className="flex items-center justify-center gap-1.5 rounded-xl border border-red-200 px-3 py-2 text-xs font-semibold text-red-500 transition hover:bg-red-50"
+                      className="flex items-center justify-center gap-1.5 rounded-xl border border-red-200 px-4 py-2.5 text-xs font-semibold text-red-500 transition hover:bg-red-50 active:scale-[0.98]"
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      Remove
+                      <Trash2 className="h-3.5 w-3.5 shrink-0" />
+                      <span className="hidden sm:inline">Remove</span>
                     </button>
                   </div>
                 </div>
