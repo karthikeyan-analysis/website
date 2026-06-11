@@ -532,6 +532,17 @@ export const ordersService = {
     }
   },
 
+  async updateTrackingId(id, trackingId) {
+    try {
+      const ref = doc(db, "orders", String(id));
+      await updateDoc(ref, { trackingId: String(trackingId || "").trim(), updatedAt: new Date() });
+      return true;
+    } catch (error) {
+      console.error("Error updating tracking ID:", error);
+      throw error;
+    }
+  },
+
   async deleteOrder(id) {
     try {
       await deleteDoc(doc(db, "orders", String(id)));

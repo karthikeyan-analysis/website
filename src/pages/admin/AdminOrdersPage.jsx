@@ -273,10 +273,7 @@ export default function AdminOrdersPage() {
     setSavingTracking(true);
     try {
       const tracking = trackingIdInput.trim();
-      await ordersService.updateOrderStatus(selectedOrder.id, {
-        status: selectedOrder.status || "shipped",
-        trackingId: tracking,
-      });
+      await ordersService.updateTrackingId(selectedOrder.id, tracking);
       const updated = orders.map((o) =>
         o.id === selectedOrder.id ? { ...o, trackingId: tracking } : o,
       );

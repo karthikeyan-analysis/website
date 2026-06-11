@@ -44,40 +44,7 @@ export const apiCall = async (endpoint, options = {}) => {
   }
 };
 
-// Categories API
-export const categoriesAPI = {
-  async getAll() {
-    return apiCall("/categories");
-  },
-
-  async getById(id) {
-    return apiCall(`/categories/${id}`);
-  },
-
-  async create(data) {
-    return apiCall("/categories", {
-      method: "POST",
-      body: JSON.stringify(data),
-    });
-  },
-
-  async update(id, data) {
-    return apiCall(`/categories/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(data),
-    });
-  },
-
-  async delete(id) {
-    // Keep delete on collection endpoint to avoid hosts that block methods on /categories/:id.
-    return apiCall("/categories", {
-      method: "POST",
-      body: JSON.stringify({ _action: "delete", id }),
-    });
-  },
-};
-
-// Contacts API
+// Contacts API (submit only — read/update/delete handled client-side via Firestore)
 export const contactsAPI = {
   /** Uses dedicated fetch so error responses include `{ persistence, emailStatus }` on the thrown error. */
   async submit(data) {
@@ -110,22 +77,6 @@ export const contactsAPI = {
       console.error(`API Error (/contacts/submit):`, error);
       throw error;
     }
-  },
-
-  async getAll() {
-    return apiCall("/contacts");
-  },
-
-  async markAsRead(id) {
-    return apiCall(`/contacts/${id}`, {
-      method: "PATCH",
-    });
-  },
-
-  async delete(id) {
-    return apiCall(`/contacts/${id}`, {
-      method: "DELETE",
-    });
   },
 };
 
@@ -177,37 +128,6 @@ export const ordersAPI = {
         order,
         status,
       }),
-    });
-  },
-};
-
-// Products API
-export const productsAPI = {
-  async getAll() {
-    return apiCall("/products");
-  },
-
-  async getById(id) {
-    return apiCall(`/products/${id}`);
-  },
-
-  async create(data) {
-    return apiCall("/products", {
-      method: "POST",
-      body: JSON.stringify(data),
-    });
-  },
-
-  async update(id, data) {
-    return apiCall(`/products/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(data),
-    });
-  },
-
-  async delete(id) {
-    return apiCall(`/products/${id}`, {
-      method: "DELETE",
     });
   },
 };
