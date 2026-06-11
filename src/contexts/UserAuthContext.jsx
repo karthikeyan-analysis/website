@@ -48,17 +48,19 @@ export const UserAuthProvider = ({ children }) => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      try {
-        if (firebaseUser) {
-          const profile = await userService.getOrCreateProfile(firebaseUser);
-          setUser(firebaseUser);
-          setUserProfile(profile);
-        } else {
-          setUser(null);
-          setUserProfile(null);
-        }
-      } catch {
+      if (!firebaseUser) {
         setUser(null);
+        setUserProfile(null);
+        setLoading(false);
+        return;
+      }
+      // Always set the Firebase user immediately so auth-gated routes work
+      setUser(firebaseUser);
+      try {
+        const profile = await userService.getOrCreateProfile(firebaseUser);
+        setUserProfile(profile);
+      } catch {
+        // Profile fetch failed (e.g. Firestore offline) — user stays logged in
         setUserProfile(null);
       } finally {
         setLoading(false);

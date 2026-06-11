@@ -104,15 +104,15 @@ export default function AddressesPage() {
 
     setSaving(true);
     try {
+      let savedId = editId;
       if (editId) {
         await userService.updateAddress(user.uid, editId, form);
       } else {
-        await userService.addAddress(user.uid, form);
+        const newAddr = await userService.addAddress(user.uid, form);
+        savedId = newAddr.id;
       }
-      if (form.isDefault) {
-        const all = await userService.getAddresses(user.uid);
-        const newId = editId || all[0]?.id;
-        if (newId) await userService.setDefaultAddress(user.uid, newId);
+      if (form.isDefault && savedId) {
+        await userService.setDefaultAddress(user.uid, savedId);
       }
       await load();
       setShowForm(false);
