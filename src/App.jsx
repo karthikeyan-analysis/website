@@ -5,8 +5,11 @@ import ScrollToTop from "./components/ScrollToTop";
 import FloatingButtons from "./components/FloatingButtons";
 import { CartProvider } from "./hooks/useCart";
 import { AdminAuthProvider } from "./contexts/AdminAuthContext";
+import { UserAuthProvider } from "./contexts/UserAuthContext";
+import { WishlistProvider } from "./contexts/WishlistContext";
 import { ProtectedAdminRoute } from "./components/admin/ProtectedAdminRoute";
 import { PublicAdminRoute } from "./components/admin/PublicAdminRoute";
+import { ProtectedUserRoute } from "./components/user/ProtectedUserRoute";
 
 const HERO_CAROUSEL_IMAGES = [
   "/hero_carousal/14.png",
@@ -40,6 +43,17 @@ const ProductDetailsPage = lazy(() => import("./pages/ProductDetailsPage"));
 const OrderPlacedPage = lazy(() => import("./pages/OrderPlacedPage"));
 const TrackOrderPage = lazy(() => import("./pages/TrackOrderPage"));
 
+// Customer auth pages
+const LoginPage = lazy(() => import("./pages/LoginPage"));
+const SignupPage = lazy(() => import("./pages/SignupPage"));
+const ForgotPasswordPage = lazy(() => import("./pages/ForgotPasswordPage"));
+
+// Customer account pages (protected)
+const ProfilePage = lazy(() => import("./pages/ProfilePage"));
+const MyOrdersPage = lazy(() => import("./pages/MyOrdersPage"));
+const AddressesPage = lazy(() => import("./pages/AddressesPage"));
+const WishlistPage = lazy(() => import("./pages/WishlistPage"));
+
 // Policy Pages
 const PrivacyPolicyPage = lazy(() => import("./pages/PrivacyPolicyPage"));
 const TermsConditionsPage = lazy(() => import("./pages/TermsConditionsPage"));
@@ -48,20 +62,20 @@ const ShippingPolicyPage = lazy(() => import("./pages/ShippingPolicyPage"));
 
 // Admin Pages
 const AdminLoginPage = lazy(() => import("./pages/admin/AdminLoginPage"));
-const AdminDashboardPage = lazy(
-  () => import("./pages/admin/AdminDashboardPage"),
-);
+const AdminDashboardPage = lazy(() => import("./pages/admin/AdminDashboardPage"));
 const AdminProductsPage = lazy(() => import("./pages/admin/AdminProductsPage"));
-const AdminCategoriesPage = lazy(
-  () => import("./pages/admin/AdminCategoriesPage"),
-);
+const AdminCategoriesPage = lazy(() => import("./pages/admin/AdminCategoriesPage"));
 const AdminOrdersPage = lazy(() => import("./pages/admin/AdminOrdersPage"));
 const AdminContactsPage = lazy(() => import("./pages/admin/AdminContactsPage"));
-const AdminTestimonialsPage = lazy(
-  () => import("./pages/admin/AdminTestimonialsPage"),
-);
-const AdminOfferBannerPage = lazy(
-  () => import("./pages/admin/AdminOfferBannerPage"),
+const AdminTestimonialsPage = lazy(() => import("./pages/admin/AdminTestimonialsPage"));
+const AdminOfferBannerPage = lazy(() => import("./pages/admin/AdminOfferBannerPage"));
+const AdminCustomersPage = lazy(() => import("./pages/admin/AdminCustomersPage"));
+
+const Spinner = (
+  <div className="flex min-h-[50dvh] flex-col items-center justify-center gap-4 bg-slate-50 px-4">
+    <div className="h-10 w-10 animate-spin rounded-full border-2 border-brand-navy border-t-transparent" aria-hidden="true" />
+    <p className="text-sm font-semibold tracking-tight text-brand-navy">Loading…</p>
+  </div>
 );
 
 function App() {
@@ -75,129 +89,69 @@ function App() {
 
   return (
     <AdminAuthProvider>
-      <CartProvider>
-        <BrowserRouter>
-          <ScrollToTop />
-          <Suspense
-            fallback={
-              <div className="flex min-h-[50dvh] flex-col items-center justify-center gap-4 bg-slate-50 px-4">
-                <div
-                  className="h-10 w-10 animate-spin rounded-full border-2 border-brand-navy border-t-transparent"
-                  aria-hidden="true"
-                />
-                <p className="text-sm font-semibold tracking-tight text-brand-navy">
-                  Loading…
-                </p>
-              </div>
-            }
-          >
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/about" element={<AboutPage />} />
-              <Route path="/group-i" element={<GroupIPage />} />
-              <Route path="/group-ii" element={<GroupIIPage />} />
-              <Route path="/group-i-ii" element={<GroupPage />} />
-              <Route
-                path="/statistical-services"
-                element={<StatisticalPage />}
-              />
-              <Route path="/trb-courses" element={<TrbPage />} />
-              <Route path="/trb-ug" element={<TrbUGPage />} />
-              <Route path="/trb-pg" element={<TrbPGPage />} />
-              <Route path="/batches" element={<BatchesPage />} />
-              <Route path="/achievements" element={<AchievementsPage />} />
-              <Route path="/contact" element={<ContactPage />} />
-              <Route path="/book-store" element={<BookStorePage />} />
-              <Route path="/book-store/:id" element={<ProductDetailsPage />} />
-              <Route path="/order-placed/:id" element={<OrderPlacedPage />} />
-              <Route path="/track-order" element={<TrackOrderPage />} />
+      <UserAuthProvider>
+        <WishlistProvider>
+          <CartProvider>
+            <BrowserRouter>
+              <ScrollToTop />
+              <Suspense fallback={Spinner}>
+                <Routes>
+                  {/* Public routes */}
+                  <Route path="/" element={<HomePage />} />
+                  <Route path="/about" element={<AboutPage />} />
+                  <Route path="/group-i" element={<GroupIPage />} />
+                  <Route path="/group-ii" element={<GroupIIPage />} />
+                  <Route path="/group-i-ii" element={<GroupPage />} />
+                  <Route path="/statistical-services" element={<StatisticalPage />} />
+                  <Route path="/trb-courses" element={<TrbPage />} />
+                  <Route path="/trb-ug" element={<TrbUGPage />} />
+                  <Route path="/trb-pg" element={<TrbPGPage />} />
+                  <Route path="/batches" element={<BatchesPage />} />
+                  <Route path="/achievements" element={<AchievementsPage />} />
+                  <Route path="/contact" element={<ContactPage />} />
+                  <Route path="/book-store" element={<BookStorePage />} />
+                  <Route path="/book-store/:id" element={<ProductDetailsPage />} />
+                  <Route path="/order-placed/:id" element={<OrderPlacedPage />} />
+                  <Route path="/track-order" element={<TrackOrderPage />} />
 
-              {/* Policy Routes */}
-              <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
-              <Route
-                path="/terms-conditions"
-                element={<TermsConditionsPage />}
-              />
-              <Route path="/refund-policy" element={<RefundPolicyPage />} />
-              <Route path="/shipping-policy" element={<ShippingPolicyPage />} />
+                  {/* Customer auth pages */}
+                  <Route path="/login" element={<LoginPage />} />
+                  <Route path="/signup" element={<SignupPage />} />
+                  <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
-              {/* Admin Routes */}
-              <Route
-                path="/admin/login"
-                element={
-                  <PublicAdminRoute>
-                    <AdminLoginPage />
-                  </PublicAdminRoute>
-                }
-              />
-              <Route
-                path="/admin/signup"
-                element={<Navigate to="/admin/login" replace />}
-              />
-              <Route
-                path="/admin/dashboard"
-                element={
-                  <ProtectedAdminRoute>
-                    <AdminDashboardPage />
-                  </ProtectedAdminRoute>
-                }
-              />
-              <Route
-                path="/admin/categories"
-                element={
-                  <ProtectedAdminRoute>
-                    <AdminCategoriesPage />
-                  </ProtectedAdminRoute>
-                }
-              />
-              <Route
-                path="/admin/products"
-                element={
-                  <ProtectedAdminRoute>
-                    <AdminProductsPage />
-                  </ProtectedAdminRoute>
-                }
-              />
-              <Route
-                path="/admin/orders"
-                element={
-                  <ProtectedAdminRoute>
-                    <AdminOrdersPage />
-                  </ProtectedAdminRoute>
-                }
-              />
-              <Route
-                path="/admin/contacts"
-                element={
-                  <ProtectedAdminRoute>
-                    <AdminContactsPage />
-                  </ProtectedAdminRoute>
-                }
-              />
-              <Route
-                path="/admin/testimonials"
-                element={
-                  <ProtectedAdminRoute>
-                    <AdminTestimonialsPage />
-                  </ProtectedAdminRoute>
-                }
-              />
-              <Route
-                path="/admin/offer-banner"
-                element={
-                  <ProtectedAdminRoute>
-                    <AdminOfferBannerPage />
-                  </ProtectedAdminRoute>
-                }
-              />
+                  {/* Customer account pages (require login) */}
+                  <Route path="/profile" element={<ProtectedUserRoute><ProfilePage /></ProtectedUserRoute>} />
+                  <Route path="/my-orders" element={<ProtectedUserRoute><MyOrdersPage /></ProtectedUserRoute>} />
+                  <Route path="/addresses" element={<ProtectedUserRoute><AddressesPage /></ProtectedUserRoute>} />
+                  <Route path="/wishlist" element={<ProtectedUserRoute><WishlistPage /></ProtectedUserRoute>} />
 
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-            <CartDrawer />
-            <FloatingButtons />
-          </Suspense>
-        </BrowserRouter>
-      </CartProvider>
+                  {/* Policy Routes */}
+                  <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+                  <Route path="/terms-conditions" element={<TermsConditionsPage />} />
+                  <Route path="/refund-policy" element={<RefundPolicyPage />} />
+                  <Route path="/shipping-policy" element={<ShippingPolicyPage />} />
+
+                  {/* Admin Routes */}
+                  <Route path="/admin/login" element={<PublicAdminRoute><AdminLoginPage /></PublicAdminRoute>} />
+                  <Route path="/admin/signup" element={<Navigate to="/admin/login" replace />} />
+                  <Route path="/admin/dashboard" element={<ProtectedAdminRoute><AdminDashboardPage /></ProtectedAdminRoute>} />
+                  <Route path="/admin/categories" element={<ProtectedAdminRoute><AdminCategoriesPage /></ProtectedAdminRoute>} />
+                  <Route path="/admin/products" element={<ProtectedAdminRoute><AdminProductsPage /></ProtectedAdminRoute>} />
+                  <Route path="/admin/orders" element={<ProtectedAdminRoute><AdminOrdersPage /></ProtectedAdminRoute>} />
+                  <Route path="/admin/contacts" element={<ProtectedAdminRoute><AdminContactsPage /></ProtectedAdminRoute>} />
+                  <Route path="/admin/testimonials" element={<ProtectedAdminRoute><AdminTestimonialsPage /></ProtectedAdminRoute>} />
+                  <Route path="/admin/offer-banner" element={<ProtectedAdminRoute><AdminOfferBannerPage /></ProtectedAdminRoute>} />
+                  <Route path="/admin/customers" element={<ProtectedAdminRoute><AdminCustomersPage /></ProtectedAdminRoute>} />
+
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+                <CartDrawer />
+                <FloatingButtons />
+              </Suspense>
+            </BrowserRouter>
+          </CartProvider>
+        </WishlistProvider>
+      </UserAuthProvider>
     </AdminAuthProvider>
   );
 }

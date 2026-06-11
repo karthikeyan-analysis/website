@@ -1,4 +1,4 @@
-import { ArrowLeft, Star } from "lucide-react";
+import { ArrowLeft, Heart, Star } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import PageLayout from "../components/layout/PageLayout";
@@ -6,6 +6,7 @@ import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
 import Container from "../components/ui/Container";
 import { useCart } from "../hooks/useCart";
+import { useWishlist } from "../contexts/WishlistContext";
 import { productsService } from "../services/firebaseService";
 import {
   STOCK_STATUS,
@@ -37,7 +38,8 @@ function formatDate(value) {
 export default function ProductDetailsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { addToCart } = useCart();
+  const { addToCart } = useCart()
+  const { isWishlisted, toggleWishlist } = useWishlist();
   const [product, setProduct] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -239,14 +241,27 @@ export default function ProductDetailsPage() {
                         ) : null}
                       </div>
 
-                      <div className="mt-4">
+                      <div className="mt-4 flex gap-2">
                         <Button
                           disabled={!canAddToCart}
                           onClick={() => canAddToCart && addToCart(product)}
-                          className="w-full"
+                          className="flex-1"
                         >
                           {cartButtonLabel}
                         </Button>
+                        <button
+                          type="button"
+                          onClick={() => toggleWishlist(product)}
+                          aria-label={isWishlisted(product.id) ? "Remove from wishlist" : "Save to wishlist"}
+                          className={`inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition ${
+                            isWishlisted(product.id)
+                              ? "border-red-300 bg-red-50 text-red-500 hover:bg-red-100"
+                              : "border-black/10 bg-white text-brand-black/50 hover:border-red-300 hover:text-red-400"
+                          }`}
+                        >
+                          <Heart className={`h-4 w-4 ${isWishlisted(product.id) ? "fill-current" : ""}`} />
+                          {isWishlisted(product.id) ? "Wishlisted" : "Wishlist"}
+                        </button>
                       </div>
 
                       <p className="mt-3 text-xs text-brand-black/55">

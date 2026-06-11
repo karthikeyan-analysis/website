@@ -2,6 +2,7 @@ import { Search } from "lucide-react";
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import PageLayout from "../components/layout/PageLayout";
+import ShipmentTracker from "../components/tracking/ShipmentTracker";
 import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
 import Container from "../components/ui/Container";
@@ -127,6 +128,7 @@ export default function TrackOrderPage() {
                   <p className="mt-1 text-base font-bold text-brand-navy">{order.id}</p>
                 </div>
 
+
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="rounded-xl border border-black/10 p-4">
                     <p className="text-xs font-semibold text-brand-black/60">Status</p>
@@ -165,6 +167,15 @@ export default function TrackOrderPage() {
                     {order.address || "Address not available"}
                   </p>
                 </div>
+
+                {order.trackingId && (
+                  <div>
+                    <p className="mb-3 text-sm font-bold text-brand-navy">
+                      Live Shipment Tracking (ST Courier)
+                    </p>
+                    <ShipmentTracker awb={order.trackingId} />
+                  </div>
+                )}
               </div>
             ) : null}
 

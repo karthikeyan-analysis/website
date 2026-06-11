@@ -1,8 +1,10 @@
 import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react'
-import { Minus, Plus, ShoppingBag, X } from 'lucide-react'
+import { ChevronDown, MapPin, Minus, Plus, ShoppingBag, User, X } from 'lucide-react'
 import { useCart } from '../../hooks/useCart'
-import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useUserAuth } from '../../contexts/UserAuthContext'
+import { userService } from '../../services/userService'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { paymentsService } from '../../services/firebaseService'
 
 function formatMoney(value) {
@@ -11,12 +13,17 @@ function formatMoney(value) {
   return n.toFixed(2)
 }
 
+const INPUT_CLS = 'w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-navy/20'
+
 export default function CartDrawer() {
   const { items, isOpen, setIsOpen, subtotal, updateQty, clearCart } = useCart()
+  const { user, userProfile } = useUserAuth()
   const navigate = useNavigate()
   const [step, setStep] = useState('cart') // cart | checkout | success
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [savedAddresses, setSavedAddresses] = useState([])
+  const [selectedAddressId, setSelectedAddressId] = useState('new')
   const [customer, setCustomer] = useState({
     name: '',
     email: '',
@@ -32,6 +39,70 @@ export default function CartDrawer() {
   })
 
   const amount = useMemo(() => Number(subtotal || 0), [subtotal])
+
+  // Pre-fill from user profile when moving to checkout
+  useEffect(() => {
+    if (step !== 'checkout') return
+    if (user && userProfile) {
+      setCustomer((p) => ({
+        ...p,
+        name: p.name || userProfile.name || '',
+        email: p.email || user.email || '',
+        phone: p.phone || userProfile.phone || '',
+      }))
+    } else if (user) {
+      setCustomer((p) => ({
+        ...p,
+        email: p.email || user.email || '',
+      }))
+    }
+
+    // Load saved addresses for logged-in users
+    if (user?.uid) {
+      userService.getAddresses(user.uid).then((addrs) => {
+        setSavedAddresses(addrs || [])
+        const def = (addrs || []).find((a) => a.isDefault)
+        if (def) {
+          setSelectedAddressId(def.id)
+          fillAddress(def)
+        }
+      }).catch(() => {})
+    }
+  }, [step, user, userProfile])
+
+  function fillAddress(addr) {
+    setCustomer((p) => ({
+      ...p,
+      name: p.name || addr.name || '',
+      phone: p.phone || addr.phone || '',
+      addressLine1: addr.addressLine1 || '',
+      addressLine2: addr.addressLine2 || '',
+      area: addr.area || '',
+      city: addr.city || '',
+      state: addr.state || '',
+      pincode: addr.pincode || '',
+      landmark: addr.landmark || '',
+    }))
+  }
+
+  function handleSelectAddress(id) {
+    setSelectedAddressId(id)
+    if (id === 'new') {
+      setCustomer((p) => ({
+        ...p,
+        addressLine1: '',
+        addressLine2: '',
+        area: '',
+        city: '',
+        state: '',
+        pincode: '',
+        landmark: '',
+      }))
+      return
+    }
+    const addr = savedAddresses.find((a) => a.id === id)
+    if (addr) fillAddress(addr)
+  }
 
   async function loadRazorpayScript() {
     if (window.Razorpay) return true
@@ -134,9 +205,12 @@ export default function CartDrawer() {
                 name: i.name,
                 quantity: Number(i.qty || 0),
                 price: Number(i.price || 0),
+                image: i.image || '',
               })),
               address: formatAddressForStorage(),
               total: Number(amount),
+              userId: user?.uid || null,
+              userEmail: user?.email || null,
             })
 
             clearCart()
@@ -185,6 +259,16 @@ export default function CartDrawer() {
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
           {step === 'cart' ? (
             <div className="mt-4 space-y-3 sm:mt-5">
+              {/* Login nudge for guests */}
+              {!user && items.length > 0 && (
+                <div className="flex items-center gap-3 rounded-xl border border-brand-navy/15 bg-brand-navy/[0.04] px-4 py-3">
+                  <User className="h-4 w-4 shrink-0 text-brand-navy/60" />
+                  <p className="flex-1 text-xs text-brand-navy/70">
+                    <Link to="/login" onClick={onClose} className="font-bold text-brand-navy hover:underline">Sign in</Link>{" "}
+                    to auto-fill your address and track orders
+                  </p>
+                </div>
+              )}
               {items.length === 0 ? (
                 <p className="rounded-xl bg-black/[0.02] p-4 text-sm text-brand-black/70">Your cart is empty.</p>
               ) : (
@@ -195,42 +279,23 @@ export default function CartDrawer() {
                         {item.image ? (
                           <img src={item.image} alt={item.name} className="h-full w-full object-cover" loading="lazy" />
                         ) : (
-                          <div className="grid h-full w-full place-items-center text-[10px] font-semibold text-brand-black/40">
-                            No image
-                          </div>
+                          <div className="grid h-full w-full place-items-center text-[10px] font-semibold text-brand-black/40">No image</div>
                         )}
                       </div>
-
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold text-brand-navy">{item.name}</p>
-                        <p className="mt-1 text-xs text-brand-black/60">
-                          Rs. {formatMoney(item.price)} • Qty {item.qty}
-                        </p>
-
+                        <p className="mt-1 text-xs text-brand-black/60">Rs. {formatMoney(item.price)} • Qty {item.qty}</p>
                         <div className="mt-3 flex items-center justify-between gap-3">
                           <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => updateQty(item.id, -1)}
-                              className="inline-flex size-9 touch-manipulation items-center justify-center rounded-lg border border-black/10 bg-white text-brand-navy shadow-sm transition hover:bg-black/[0.03]"
-                              aria-label="Decrease quantity"
-                            >
+                            <button type="button" onClick={() => updateQty(item.id, -1)} className="inline-flex size-9 touch-manipulation items-center justify-center rounded-lg border border-black/10 bg-white text-brand-navy shadow-sm transition hover:bg-black/[0.03]" aria-label="Decrease quantity">
                               <Minus className="h-4 w-4" />
                             </button>
                             <span className="w-7 text-center text-sm font-bold text-brand-navy">{item.qty}</span>
-                            <button
-                              type="button"
-                              onClick={() => updateQty(item.id, 1)}
-                              className="inline-flex size-9 touch-manipulation items-center justify-center rounded-lg border border-black/10 bg-white text-brand-navy shadow-sm transition hover:bg-black/[0.03]"
-                              aria-label="Increase quantity"
-                            >
+                            <button type="button" onClick={() => updateQty(item.id, 1)} className="inline-flex size-9 touch-manipulation items-center justify-center rounded-lg border border-black/10 bg-white text-brand-navy shadow-sm transition hover:bg-black/[0.03]" aria-label="Increase quantity">
                               <Plus className="h-4 w-4" />
                             </button>
                           </div>
-
-                          <p className="text-sm font-bold text-brand-navy">
-                            Rs. {formatMoney(Number(item.price) * Number(item.qty || 0))}
-                          </p>
+                          <p className="text-sm font-bold text-brand-navy">Rs. {formatMoney(Number(item.price) * Number(item.qty || 0))}</p>
                         </div>
                       </div>
                     </div>
@@ -244,57 +309,109 @@ export default function CartDrawer() {
                 <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>
               ) : null}
 
+              {/* Saved address picker */}
+              {savedAddresses.length > 0 && (
+                <div>
+                  <label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-brand-black/70">
+                    <MapPin className="h-3.5 w-3.5" />
+                    Saved Addresses
+                  </label>
+                  <div className="space-y-2">
+                    {savedAddresses.map((addr) => (
+                      <label
+                        key={addr.id}
+                        className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition ${
+                          selectedAddressId === addr.id
+                            ? 'border-brand-navy bg-brand-navy/[0.04]'
+                            : 'border-black/10 hover:border-brand-navy/30'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="saved-address"
+                          value={addr.id}
+                          checked={selectedAddressId === addr.id}
+                          onChange={() => handleSelectAddress(addr.id)}
+                          className="mt-0.5 accent-brand-navy"
+                        />
+                        <div className="min-w-0 flex-1">
+                          {addr.label && <p className="text-xs font-bold text-brand-navy">{addr.label}</p>}
+                          <p className="text-xs text-slate-600">
+                            {[addr.addressLine1, addr.area, addr.city, addr.pincode].filter(Boolean).join(', ')}
+                          </p>
+                        </div>
+                      </label>
+                    ))}
+                    <label
+                      className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition ${
+                        selectedAddressId === 'new'
+                          ? 'border-brand-navy bg-brand-navy/[0.04]'
+                          : 'border-black/10 hover:border-brand-navy/30'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="saved-address"
+                        value="new"
+                        checked={selectedAddressId === 'new'}
+                        onChange={() => handleSelectAddress('new')}
+                        className="accent-brand-navy"
+                      />
+                      <span className="text-xs font-semibold text-slate-600">Enter a new address</span>
+                    </label>
+                  </div>
+                  <div className="mt-4 border-t border-black/[0.06] pt-4" />
+                </div>
+              )}
+
               <div>
                 <label className="mb-1 block text-xs font-semibold text-brand-black/70">Full name</label>
-                <input value={customer.name} onChange={(e) => setCustomer((p) => ({ ...p, name: e.target.value }))} className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-navy/20" />
+                <input value={customer.name} onChange={(e) => setCustomer((p) => ({ ...p, name: e.target.value }))} className={INPUT_CLS} />
               </div>
               <div>
                 <label className="mb-1 block text-xs font-semibold text-brand-black/70">Email</label>
-                <input type="email" value={customer.email} onChange={(e) => setCustomer((p) => ({ ...p, email: e.target.value }))} className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-navy/20" />
+                <input type="email" value={customer.email} onChange={(e) => setCustomer((p) => ({ ...p, email: e.target.value }))} className={INPUT_CLS} />
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
                   <label className="mb-1 block text-xs font-semibold text-brand-black/70">Phone</label>
-                  <input value={customer.phone} onChange={(e) => setCustomer((p) => ({ ...p, phone: e.target.value }))} className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-navy/20" placeholder="Primary number" />
+                  <input value={customer.phone} onChange={(e) => setCustomer((p) => ({ ...p, phone: e.target.value }))} className={INPUT_CLS} placeholder="Primary number" />
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-semibold text-brand-black/70">Alternate phone (optional)</label>
-                  <input value={customer.altPhone} onChange={(e) => setCustomer((p) => ({ ...p, altPhone: e.target.value }))} className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-navy/20" placeholder="Alternate number" />
+                  <input value={customer.altPhone} onChange={(e) => setCustomer((p) => ({ ...p, altPhone: e.target.value }))} className={INPUT_CLS} placeholder="Alternate number" />
                 </div>
               </div>
-
               <div>
                 <label className="mb-1 block text-xs font-semibold text-brand-black/70">Address line 1</label>
-                <input value={customer.addressLine1} onChange={(e) => setCustomer((p) => ({ ...p, addressLine1: e.target.value }))} className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-navy/20" placeholder="House/Flat No, Street" />
+                <input value={customer.addressLine1} onChange={(e) => setCustomer((p) => ({ ...p, addressLine1: e.target.value }))} className={INPUT_CLS} placeholder="House/Flat No, Street" />
               </div>
               <div>
                 <label className="mb-1 block text-xs font-semibold text-brand-black/70">Address line 2 (optional)</label>
-                <input value={customer.addressLine2} onChange={(e) => setCustomer((p) => ({ ...p, addressLine2: e.target.value }))} className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-navy/20" placeholder="Apartment, Floor, etc." />
+                <input value={customer.addressLine2} onChange={(e) => setCustomer((p) => ({ ...p, addressLine2: e.target.value }))} className={INPUT_CLS} placeholder="Apartment, Floor, etc." />
               </div>
-
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
                   <label className="mb-1 block text-xs font-semibold text-brand-black/70">Area / Locality</label>
-                  <input value={customer.area} onChange={(e) => setCustomer((p) => ({ ...p, area: e.target.value }))} className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-navy/20" placeholder="Area / Locality" />
+                  <input value={customer.area} onChange={(e) => setCustomer((p) => ({ ...p, area: e.target.value }))} className={INPUT_CLS} placeholder="Area / Locality" />
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-semibold text-brand-black/70">Landmark (optional)</label>
-                  <input value={customer.landmark} onChange={(e) => setCustomer((p) => ({ ...p, landmark: e.target.value }))} className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-navy/20" placeholder="Near..." />
+                  <input value={customer.landmark} onChange={(e) => setCustomer((p) => ({ ...p, landmark: e.target.value }))} className={INPUT_CLS} placeholder="Near..." />
                 </div>
               </div>
-
               <div className="grid gap-3 sm:grid-cols-3">
                 <div>
                   <label className="mb-1 block text-xs font-semibold text-brand-black/70">City</label>
-                  <input value={customer.city} onChange={(e) => setCustomer((p) => ({ ...p, city: e.target.value }))} className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-navy/20" placeholder="City" />
+                  <input value={customer.city} onChange={(e) => setCustomer((p) => ({ ...p, city: e.target.value }))} className={INPUT_CLS} placeholder="City" />
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-semibold text-brand-black/70">State</label>
-                  <input value={customer.state} onChange={(e) => setCustomer((p) => ({ ...p, state: e.target.value }))} className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-navy/20" placeholder="State" />
+                  <input value={customer.state} onChange={(e) => setCustomer((p) => ({ ...p, state: e.target.value }))} className={INPUT_CLS} placeholder="State" />
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-semibold text-brand-black/70">Pincode</label>
-                  <input inputMode="numeric" value={customer.pincode} onChange={(e) => setCustomer((p) => ({ ...p, pincode: e.target.value }))} className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-navy/20" placeholder="600034" />
+                  <input inputMode="numeric" value={customer.pincode} onChange={(e) => setCustomer((p) => ({ ...p, pincode: e.target.value }))} className={INPUT_CLS} placeholder="600034" />
                 </div>
               </div>
             </div>

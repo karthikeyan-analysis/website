@@ -12,6 +12,7 @@ import {
   ChevronRight,
   MessageCircle,
   Megaphone,
+  Users,
 } from "lucide-react";
 import { useAdminAuth } from "../../contexts/AdminAuthContext";
 
@@ -56,6 +57,11 @@ const AdminLayout = ({ children }) => {
       name: "Offer ticker",
       href: "/admin/offer-banner",
       icon: Megaphone,
+    },
+    {
+      name: "Customers",
+      href: "/admin/customers",
+      icon: Users,
     },
   ];
 

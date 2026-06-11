@@ -10,19 +10,25 @@ import {
   ChevronRight,
   ExternalLink,
   GraduationCap,
+  Heart,
   Home,
   Info,
+  LogOut,
   Mail,
+  MapPin,
   Menu as MenuIcon,
+  Package,
   Phone,
   ShoppingBag,
   Star,
   Trophy,
+  User,
   Users,
   X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
+import { useUserAuth } from "../../contexts/UserAuthContext";
 import { useCart } from "../../hooks/useCart";
 import { useScrollDirection } from "../../hooks/useScrollDirection";
 import Container from "../ui/Container";
@@ -31,7 +37,6 @@ import OfferBanner from "./OfferBanner";
 const navTriggerClass =
   "flex w-max items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-semibold text-white/90 outline-none transition hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-brand-cta lg:px-3 lg:py-1.5 lg:text-[13px]";
 
-/** Hover-controlled nav dropdown; high z-index so panels paint above the white header below. */
 function HoverNavDropdown({ menuId, label, items }) {
   const [open, setOpen] = useState(false);
 
@@ -68,7 +73,6 @@ function HoverNavDropdown({ menuId, label, items }) {
           aria-hidden
         />
       </button>
-      {/* pt-2 bridges hover gap between trigger and panel (reduces accidental close) */}
       <div
         id={`${menuId}-panel`}
         role="menu"
@@ -94,22 +98,89 @@ function HoverNavDropdown({ menuId, label, items }) {
   );
 }
 
+function UserDropdown({ user, userProfile, logout }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const displayName = userProfile?.name || user?.email?.split("@")[0] || "Account";
+  const initial = displayName[0].toUpperCase();
+
+  const handleLogout = async () => {
+    setOpen(false);
+    await logout();
+  };
+
+  return (
+    <div ref={ref} className="relative z-[200]">
+      <button
+        type="button"
+        onClick={() => setOpen((p) => !p)}
+        className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-semibold text-white/90 transition hover:bg-white/10 hover:text-white"
+        aria-expanded={open}
+      >
+        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20 text-[10px] font-bold text-white">
+          {initial}
+        </span>
+        <span className="max-w-[80px] truncate">{displayName}</span>
+        <ChevronDown
+          className={`h-3.5 w-3.5 shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full z-[250] mt-2 w-52 overflow-hidden rounded-xl bg-brand-cta/95 p-1 shadow-soft backdrop-blur">
+          {[
+            { to: "/profile", label: "My Profile", Icon: User },
+            { to: "/my-orders", label: "My Orders", Icon: Package },
+            { to: "/addresses", label: "Addresses", Icon: MapPin },
+            { to: "/wishlist", label: "Wishlist", Icon: Heart },
+          ].map(({ to, label, Icon }) => (
+            <Link
+              key={to}
+              to={to}
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-white/95 transition hover:bg-white/12"
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {label}
+            </Link>
+          ))}
+          <div className="my-1 border-t border-white/10" />
+          <button
+            onClick={handleLogout}
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-white/70 transition hover:bg-red-500/20 hover:text-white"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            Sign Out
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const hideOfferOnScrollDown = useScrollDirection(40);
+  const location = useLocation();
+  const isStorePage = location.pathname.startsWith("/book-store");
+  const { itemCount, setIsOpen } = useCart();
+  const { user, userProfile, logout } = useUserAuth();
 
-  // Hide floating buttons while the drawer is open
   useEffect(() => {
     document.body.classList.toggle("drawer-open", mobileOpen);
     return () => document.body.classList.remove("drawer-open");
   }, [mobileOpen]);
-  const location = useLocation();
-  const isStorePage = location.pathname.startsWith("/book-store");
-  const { itemCount, setIsOpen } = useCart();
 
   return (
     <header className="sticky top-0 z-40 isolate bg-white/95 shadow-[0_1px_0_0_rgba(0,0,0,0.06)] backdrop-blur-md supports-[backdrop-filter]:bg-white/90">
-      {/* Offer scroller at very top */}
       <div
         className={`relative z-50 overflow-hidden bg-slate-100 transition-[max-height,opacity] duration-300 ease-out ${
           hideOfferOnScrollDown ? "max-h-0 opacity-0" : "max-h-12 opacity-100"
@@ -118,7 +189,6 @@ export default function Header() {
         <OfferBanner />
       </div>
 
-      {/* Top nav (links + login/shop) */}
       <nav className="relative z-50 hidden bg-brand-cta text-white lg:block">
         <Container className="py-2">
           <div className="flex flex-wrap items-center justify-center gap-x-0.5 gap-y-1">
@@ -126,9 +196,7 @@ export default function Header() {
               to="/"
               className={({ isActive }) =>
                 `rounded-md px-2.5 py-1.5 text-xs font-semibold transition lg:px-3 lg:text-[13px] ${
-                  isActive
-                    ? "bg-white/20 text-white"
-                    : "text-white/90 hover:bg-white/10 hover:text-white"
+                  isActive ? "bg-white/20 text-white" : "text-white/90 hover:bg-white/10 hover:text-white"
                 }`
               }
             >
@@ -138,9 +206,7 @@ export default function Header() {
               to="/about"
               className={({ isActive }) =>
                 `rounded-md px-2.5 py-1.5 text-xs font-semibold transition lg:px-3 lg:text-[13px] ${
-                  isActive
-                    ? "bg-white/20 text-white"
-                    : "text-white/90 hover:bg-white/10 hover:text-white"
+                  isActive ? "bg-white/20 text-white" : "text-white/90 hover:bg-white/10 hover:text-white"
                 }`
               }
             >
@@ -158,9 +224,7 @@ export default function Header() {
               to="/statistical-services"
               className={({ isActive }) =>
                 `rounded-md px-2.5 py-1.5 text-xs font-semibold transition lg:px-3 lg:text-[13px] ${
-                  isActive
-                    ? "bg-white/20 text-white"
-                    : "text-white/90 hover:bg-white/10 hover:text-white"
+                  isActive ? "bg-white/20 text-white" : "text-white/90 hover:bg-white/10 hover:text-white"
                 }`
               }
             >
@@ -178,9 +242,7 @@ export default function Header() {
               to="/batches"
               className={({ isActive }) =>
                 `rounded-md px-2.5 py-1.5 text-xs font-semibold transition lg:px-3 lg:text-[13px] ${
-                  isActive
-                    ? "bg-white/20 text-white"
-                    : "text-white/90 hover:bg-white/10 hover:text-white"
+                  isActive ? "bg-white/20 text-white" : "text-white/90 hover:bg-white/10 hover:text-white"
                 }`
               }
             >
@@ -190,9 +252,7 @@ export default function Header() {
               to="/achievements"
               className={({ isActive }) =>
                 `rounded-md px-2.5 py-1.5 text-xs font-semibold transition lg:px-3 lg:text-[13px] ${
-                  isActive
-                    ? "bg-white/20 text-white"
-                    : "text-white/90 hover:bg-white/10 hover:text-white"
+                  isActive ? "bg-white/20 text-white" : "text-white/90 hover:bg-white/10 hover:text-white"
                 }`
               }
             >
@@ -202,9 +262,7 @@ export default function Header() {
               to="/contact"
               className={({ isActive }) =>
                 `rounded-md px-2.5 py-1.5 text-xs font-semibold transition lg:px-3 lg:text-[13px] ${
-                  isActive
-                    ? "bg-white/20 text-white"
-                    : "text-white/90 hover:bg-white/10 hover:text-white"
+                  isActive ? "bg-white/20 text-white" : "text-white/90 hover:bg-white/10 hover:text-white"
                 }`
               }
             >
@@ -244,6 +302,19 @@ export default function Header() {
                   ) : null}
                 </button>
               ) : null}
+
+              {/* Customer auth nav */}
+              {user ? (
+                <UserDropdown user={user} userProfile={userProfile} logout={logout} />
+              ) : (
+                <Link
+                  to="/login"
+                  className="inline-flex min-h-9 touch-manipulation items-center justify-center gap-1.5 rounded-md bg-white/10 px-3 py-1.5 text-xs font-bold text-white ring-1 ring-white/20 transition hover:bg-white/20"
+                >
+                  <User className="size-3.5" />
+                  Sign In
+                </Link>
+              )}
             </div>
           </div>
         </Container>
@@ -260,8 +331,6 @@ export default function Header() {
               loading="eager"
               decoding="async"
             />
-
-            {/* Mobile hamburger beside banner (no overlap) */}
             <button
               type="button"
               onClick={() => setMobileOpen(true)}
@@ -276,30 +345,24 @@ export default function Header() {
         </Container>
       </div>
 
-      {/* ─── Mobile drawer ─────────────────────────────────────────── */}
+      {/* Mobile drawer */}
       <Dialog
         open={mobileOpen}
         onClose={() => setMobileOpen(false)}
         className="relative z-[100]"
       >
-        {/* Backdrop */}
         <DialogBackdrop
           transition={false}
           className="fixed inset-0 z-[99] bg-brand-navy/70 backdrop-blur-sm"
         />
-
-        {/* Panel */}
         <DialogPanel
           id="mobile-nav-panel"
           transition={false}
           className="fixed inset-y-0 right-0 z-[100] flex h-[100dvh] w-[min(88vw,22rem)] flex-col overflow-hidden bg-white shadow-2xl outline-none"
         >
-          {/* ── Branded header strip ── */}
           <div className="relative shrink-0 overflow-hidden bg-gradient-to-br from-brand-navy via-brand-navy to-brand-cta px-5 pb-5 pt-[max(env(safe-area-inset-top),1.25rem)]">
-            {/* subtle circle decoration */}
             <div className="pointer-events-none absolute -right-10 -top-10 size-40 rounded-full bg-white/[0.05]" />
             <div className="pointer-events-none absolute -bottom-6 -left-6 size-28 rounded-full bg-white/[0.04]" />
-
             <div className="relative flex items-center justify-between gap-3">
               <Link to="/" onClick={() => setMobileOpen(false)} className="flex items-center gap-3">
                 <img
@@ -326,7 +389,6 @@ export default function Header() {
               </button>
             </div>
 
-            {/* CTA buttons in header */}
             <div className="relative mt-4 grid grid-cols-2 gap-2">
               <a
                 href="https://karthikeyananalysisstudycircle.vercel.app/login"
@@ -349,12 +411,69 @@ export default function Header() {
             </div>
           </div>
 
-          {/* ── Scrollable nav ── */}
           <nav
             aria-label="Mobile navigation"
             className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3"
           >
-            {/* Main pages */}
+            {/* Customer Account section */}
+            {user ? (
+              <>
+                <p className="mb-1.5 px-2 text-[10px] font-bold uppercase tracking-widest text-brand-black/35">
+                  My Account
+                </p>
+                <div className="mb-3 overflow-hidden rounded-xl ring-1 ring-black/[0.08]">
+                  {[
+                    { to: "/profile", label: "My Profile", Icon: User },
+                    { to: "/my-orders", label: "My Orders", Icon: Package },
+                    { to: "/addresses", label: "Addresses", Icon: MapPin },
+                    { to: "/wishlist", label: "Wishlist", Icon: Heart },
+                  ].map(({ to, label, Icon }, i, arr) => (
+                    <Link
+                      key={to}
+                      to={to}
+                      onClick={() => setMobileOpen(false)}
+                      className={`flex min-h-11 touch-manipulation items-center gap-3 px-4 py-2.5 text-[14px] font-semibold transition active:bg-brand-navy/[0.06] ${
+                        location.pathname === to ? "bg-brand-navy/[0.07] text-brand-navy" : "text-brand-black hover:bg-black/[0.03]"
+                      } ${i < arr.length - 1 ? "border-b border-black/[0.07]" : ""}`}
+                    >
+                      <Icon className="size-4 shrink-0 text-brand-black/40" />
+                      {label}
+                      <ChevronRight className="ml-auto size-4 text-brand-black/25" />
+                    </Link>
+                  ))}
+                </div>
+                <button
+                  onClick={async () => { await logout(); setMobileOpen(false); }}
+                  className="mb-4 flex w-full items-center gap-2 rounded-xl px-4 py-2.5 text-[13px] font-semibold text-red-600 transition hover:bg-red-50"
+                >
+                  <LogOut className="size-4" />
+                  Sign Out
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="mb-1.5 px-2 text-[10px] font-bold uppercase tracking-widest text-brand-black/35">
+                  Account
+                </p>
+                <div className="mb-3 grid grid-cols-2 gap-2">
+                  <Link
+                    to="/login"
+                    onClick={() => setMobileOpen(false)}
+                    className="flex min-h-10 items-center justify-center rounded-xl bg-brand-navy px-3 text-[12px] font-bold text-white"
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    to="/signup"
+                    onClick={() => setMobileOpen(false)}
+                    className="flex min-h-10 items-center justify-center rounded-xl border border-brand-navy px-3 text-[12px] font-bold text-brand-navy"
+                  >
+                    Sign Up
+                  </Link>
+                </div>
+              </>
+            )}
+
             <p className="mb-1.5 px-2 text-[10px] font-bold uppercase tracking-widest text-brand-black/35">
               Navigate
             </p>
@@ -376,7 +495,11 @@ export default function Header() {
                         : "text-brand-black hover:bg-black/[0.04]"
                     }`}
                   >
-                    <span className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${location.pathname === to ? "bg-brand-navy text-white" : "bg-black/[0.05] text-brand-black/60"}`}>
+                    <span
+                      className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${
+                        location.pathname === to ? "bg-brand-navy text-white" : "bg-black/[0.05] text-brand-black/60"
+                      }`}
+                    >
                       <Icon className="size-4" aria-hidden />
                     </span>
                     {label}
@@ -386,7 +509,6 @@ export default function Header() {
               ))}
             </ul>
 
-            {/* TNPSC Courses */}
             <p className="mb-1.5 mt-4 px-2 text-[10px] font-bold uppercase tracking-widest text-brand-black/35">
               TNPSC Courses
             </p>
@@ -401,19 +523,16 @@ export default function Header() {
                   to={to}
                   onClick={() => setMobileOpen(false)}
                   className={`flex min-h-11 touch-manipulation items-center gap-3 px-4 py-2.5 text-[14px] font-semibold transition active:bg-brand-navy/[0.06] ${
-                    location.pathname === to
-                      ? "bg-brand-navy/[0.07] text-brand-navy"
-                      : "text-brand-black hover:bg-black/[0.03]"
+                    location.pathname === to ? "bg-brand-navy/[0.07] text-brand-navy" : "text-brand-black hover:bg-black/[0.03]"
                   } ${i < arr.length - 1 ? "border-b border-black/[0.07]" : ""}`}
                 >
-                  <Star className={`size-3.5 shrink-0 ${location.pathname === to ? "text-brand-navy" : "text-brand-black/30"}`} aria-hidden />
+                  <Star className={`size-3.5 shrink-0 ${location.pathname === to ? "text-brand-navy" : "text-brand-black/30"}`} />
                   {label}
-                  <ChevronRight className="ml-auto size-4 text-brand-black/25" aria-hidden />
+                  <ChevronRight className="ml-auto size-4 text-brand-black/25" />
                 </Link>
               ))}
             </div>
 
-            {/* TRB Courses */}
             <p className="mb-1.5 mt-4 px-2 text-[10px] font-bold uppercase tracking-widest text-brand-black/35">
               TRB Courses
             </p>
@@ -427,23 +546,19 @@ export default function Header() {
                   to={to}
                   onClick={() => setMobileOpen(false)}
                   className={`flex min-h-11 touch-manipulation items-center gap-3 px-4 py-2.5 text-[14px] font-semibold transition active:bg-brand-navy/[0.06] ${
-                    location.pathname === to
-                      ? "bg-brand-navy/[0.07] text-brand-navy"
-                      : "text-brand-black hover:bg-black/[0.03]"
+                    location.pathname === to ? "bg-brand-navy/[0.07] text-brand-navy" : "text-brand-black hover:bg-black/[0.03]"
                   } ${i < arr.length - 1 ? "border-b border-black/[0.07]" : ""}`}
                 >
-                  <BookOpen className={`size-3.5 shrink-0 ${location.pathname === to ? "text-brand-navy" : "text-brand-black/30"}`} aria-hidden />
+                  <BookOpen className={`size-3.5 shrink-0 ${location.pathname === to ? "text-brand-navy" : "text-brand-black/30"}`} />
                   {label}
-                  <ChevronRight className="ml-auto size-4 text-brand-black/25" aria-hidden />
+                  <ChevronRight className="ml-auto size-4 text-brand-black/25" />
                 </Link>
               ))}
             </div>
 
-            {/* Bottom padding so last item clears floating buttons */}
             <div className="h-6" />
           </nav>
 
-          {/* ── Footer strip ── */}
           <div className="shrink-0 border-t border-black/[0.07] bg-slate-50 px-4 pb-[max(env(safe-area-inset-bottom),1rem)] pt-3">
             <div className="mb-2.5 grid grid-cols-2 gap-2">
               <a
@@ -463,7 +578,6 @@ export default function Header() {
                 Email Us
               </a>
             </div>
-            {/* Social row */}
             <div className="flex items-center justify-center gap-3">
               {[
                 { icon: "fa-brands fa-telegram", href: "https://t.me/karthikeyananalysis", color: "#2599CE", label: "Telegram" },

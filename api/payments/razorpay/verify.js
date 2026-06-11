@@ -127,6 +127,8 @@ export default async function handler(req, res) {
       cart,
       address,
       total,
+      userId,
+      userEmail,
     } = req.body || {};
 
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
@@ -179,6 +181,8 @@ export default async function handler(req, res) {
       status: "paid",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      ...(userId ? { userId: String(userId) } : {}),
+      ...(userEmail ? { userId_email: String(userEmail).toLowerCase() } : {}),
     };
 
     await ref.set(record);

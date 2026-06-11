@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import AdminLayout from "../../components/admin/AdminLayout";
-import { Eye, Trash2, CheckCircle, Download, Copy } from "lucide-react";
+import { Eye, Trash2, CheckCircle, Download, Copy, Truck } from "lucide-react";
 import * as XLSX from "xlsx";
 import { ordersService } from "../../services/firebaseService";
 
@@ -230,6 +230,8 @@ export default function AdminOrdersPage() {
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [copiedAddressOrderId, setCopiedAddressOrderId] = useState("");
+  const [trackingIdInput, setTrackingIdInput] = useState("");
+  const [savingTracking, setSavingTracking] = useState(false);
   const [exportFromDate, setExportFromDate] = useState("");
   const [exportToDate, setExportToDate] = useState("");
   const [exportStatus, setExportStatus] = useState("all");
@@ -249,16 +251,41 @@ export default function AdminOrdersPage() {
     loadOrders();
   }, []);
 
-  const handleStatusChange = async (orderId, newStatus) => {
+  const handleStatusChange = async (orderId, newStatus, trackingId) => {
     try {
-      await ordersService.updateOrderStatus(orderId, { status: newStatus });
+      const payload = { status: newStatus };
+      if (trackingId !== undefined) payload.trackingId = trackingId;
+      await ordersService.updateOrderStatus(orderId, payload);
       const updated = orders.map((order) =>
-        order.id === orderId ? { ...order, status: newStatus } : order,
+        order.id === orderId
+          ? { ...order, status: newStatus, ...(trackingId !== undefined ? { trackingId } : {}) }
+          : order,
       );
       setOrders(updated);
       setSelectedOrder(updated.find((o) => o.id === orderId) || null);
     } catch (error) {
       console.error("Error updating order status:", error);
+    }
+  };
+
+  const handleSaveTracking = async () => {
+    if (!selectedOrder) return;
+    setSavingTracking(true);
+    try {
+      const tracking = trackingIdInput.trim();
+      await ordersService.updateOrderStatus(selectedOrder.id, {
+        status: selectedOrder.status || "shipped",
+        trackingId: tracking,
+      });
+      const updated = orders.map((o) =>
+        o.id === selectedOrder.id ? { ...o, trackingId: tracking } : o,
+      );
+      setOrders(updated);
+      setSelectedOrder({ ...selectedOrder, trackingId: tracking });
+    } catch (error) {
+      console.error("Error saving tracking ID:", error);
+    } finally {
+      setSavingTracking(false);
     }
   };
 
@@ -556,6 +583,7 @@ export default function AdminOrdersPage() {
                         <button
                           onClick={() => {
                             setSelectedOrder(order);
+                            setTrackingIdInput(order.trackingId || "");
                             setShowModal(true);
                           }}
                           className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
@@ -721,12 +749,47 @@ export default function AdminOrdersPage() {
                 </p>
               </div>
 
+              {/* ST Courier Tracking ID */}
+              <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg space-y-3">
+                <div className="flex items-center gap-2">
+                  <Truck className="h-4 w-4 text-blue-600" />
+                  <p className="font-semibold text-blue-900">ST Courier Tracking ID</p>
+                </div>
+                {selectedOrder.trackingId && (
+                  <p className="text-xs text-blue-700">
+                    Current: <span className="font-bold">{selectedOrder.trackingId}</span>
+                  </p>
+                )}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={trackingIdInput}
+                    onChange={(e) => setTrackingIdInput(e.target.value)}
+                    placeholder="Enter AWB / Tracking number"
+                    className="flex-1 rounded-lg border border-blue-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSaveTracking}
+                    disabled={savingTracking}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
+                  >
+                    <Truck className="h-4 w-4" />
+                    {savingTracking ? "Saving…" : "Save"}
+                  </button>
+                </div>
+                <p className="text-xs text-blue-600">
+                  Customers can track their shipment from My Orders once this is set.
+                </p>
+              </div>
+
               <div className="flex gap-3">
                 <button
                   onClick={() =>
                     handleStatusChange(
                       selectedOrder.id,
                       "shipped",
+                      trackingIdInput.trim() || undefined,
                     )
                   }
                   className="flex-1 flex items-center justify-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition font-semibold"

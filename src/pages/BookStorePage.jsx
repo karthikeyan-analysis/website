@@ -1,4 +1,4 @@
-import { Headset, ShieldCheck, SlidersHorizontal, Truck } from "lucide-react";
+import { Heart, Headset, ShieldCheck, SlidersHorizontal, Truck } from "lucide-react";
 import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import PageLayout from "../components/layout/PageLayout";
@@ -6,6 +6,7 @@ import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
 import Container from "../components/ui/Container";
 import { useCart } from "../hooks/useCart";
+import { useWishlist } from "../contexts/WishlistContext";
 import {
   categoriesService,
   productsService,
@@ -48,7 +49,8 @@ export default function BookStorePage() {
   const [loading, setLoading] = useState(true);
   const [productCategories, setProductCategories] = useState([]);
   const navigate = useNavigate();
-  const { addToCart } = useCart();
+  const { addToCart } = useCart()
+  const { isWishlisted, toggleWishlist } = useWishlist();
 
   useEffect(() => {
     const loadProducts = async () => {
@@ -227,10 +229,10 @@ export default function BookStorePage() {
                       {stockStatusLabel}
                     </p>
 
-                    <div className="mt-4">
+                    <div className="mt-4 flex gap-2">
                       <Button
                         type="button"
-                        className="w-full"
+                        className="flex-1"
                         disabled={!canAddToCart}
                         onClick={(e) => {
                           e.preventDefault();
@@ -240,6 +242,22 @@ export default function BookStorePage() {
                       >
                         {cartButtonLabel}
                       </Button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          toggleWishlist(product);
+                        }}
+                        aria-label={isWishlisted(product.id) ? "Remove from wishlist" : "Add to wishlist"}
+                        className={`inline-flex items-center justify-center rounded-xl border px-3 transition ${
+                          isWishlisted(product.id)
+                            ? "border-red-300 bg-red-50 text-red-500 hover:bg-red-100"
+                            : "border-black/10 bg-white text-brand-black/40 hover:border-red-300 hover:text-red-400"
+                        }`}
+                      >
+                        <Heart className={`h-4 w-4 ${isWishlisted(product.id) ? "fill-current" : ""}`} />
+                      </button>
                     </div>
                   </article>
                   );

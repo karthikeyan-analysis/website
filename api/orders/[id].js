@@ -137,8 +137,8 @@ export default async function handler(req, res) {
       if (!snap.exists) return res.status(404).json({ error: "Order not found" });
       res.status(200).json({ id: snap.id, ...snap.data() });
     } else if (req.method === "PUT") {
-      // Update order status
-      const { status } = req.body;
+      // Update order status and optionally tracking ID
+      const { status, trackingId } = req.body;
 
       if (!status) {
         return res.status(400).json({ error: "Status is required" });
@@ -149,14 +149,15 @@ export default async function handler(req, res) {
       if (!snap.exists) return res.status(404).json({ error: "Order not found" });
 
       const prev = snap.data();
-      await ref.set(
-        {
-          ...prev,
-          status,
-          updatedAt: new Date().toISOString(),
-        },
-        { merge: true },
-      );
+      const updateData = {
+        ...prev,
+        status,
+        updatedAt: new Date().toISOString(),
+      };
+      if (trackingId !== undefined) {
+        updateData.trackingId = String(trackingId || "").trim();
+      }
+      await ref.set(updateData, { merge: true });
 
       // Send status update email (optional - will skip if not configured)
       if (
