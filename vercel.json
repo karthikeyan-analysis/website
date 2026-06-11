@@ -1,6 +1,9 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "functions": {
+    "api/track.js": { "maxDuration": 30 }
+  },
   "env": {
     "VITE_FIREBASE_API_KEY": "AIzaSyDyaqfAq7x0U9N_BARkopTwD3WcsCOpopI",
     "VITE_FIREBASE_AUTH_DOMAIN": "karthikeyan-analysis.firebaseapp.com",
