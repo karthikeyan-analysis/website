@@ -207,6 +207,8 @@ function getCustomerStatusEmailHeadline(status) {
       return "Payment confirmed";
     case "pending":
       return "Your order is pending processing";
+    case "dispatched":
+      return "Your order has been dispatched";
     case "shipped":
       return "Your order has been shipped!";
     case "cancelled_waiting_refund":
@@ -226,6 +228,8 @@ export function getCustomerStatusEmailSubject(status, orderId) {
     .slice(0, 90);
   const n = String(status || "").trim().toLowerCase();
   switch (n) {
+    case "dispatched":
+      return `${sid}: Your order has been dispatched`;
     case "shipped":
       return `${sid}: Your order has been shipped`;
     case "paid":
@@ -256,6 +260,12 @@ function getStatusContentForOrderEmail(status) {
         label: "Paid",
         summary:
           "Payment is successful and your order is now in processing. We will notify you once it is shipped.",
+      };
+    case "dispatched":
+      return {
+        label: "Dispatched — Handed over to courier",
+        summary:
+          "Your tracking details will be updated once your package has been shipped.",
       };
     case "shipped":
       return {

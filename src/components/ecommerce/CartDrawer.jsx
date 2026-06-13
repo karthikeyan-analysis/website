@@ -6,6 +6,7 @@ import { userService } from '../../services/userService'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { paymentsService } from '../../services/firebaseService'
+import { savePendingPayment, clearPendingPayment } from '../../utils/paymentRecovery'
 
 function formatMoney(value) {
   const n = Number(value || 0)
@@ -14,6 +15,17 @@ function formatMoney(value) {
 }
 
 const INPUT_CLS = 'w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-navy/20'
+
+// Build a compact cart JSON for Razorpay order notes (max 250 chars per value).
+// Used by the webhook to reconstruct order details if the frontend verify call is lost.
+function buildCartNote(items) {
+  const compact = items.map((i) => ({
+    n: String(i.name || '').slice(0, 25),
+    q: Number(i.qty || 1),
+    p: Number(i.price || 0),
+  }))
+  return JSON.stringify(compact).slice(0, 250)
+}
 
 export default function CartDrawer() {
   const { items, isOpen, setIsOpen, subtotal, updateQty, clearCart } = useCart()
@@ -168,10 +180,38 @@ export default function CartDrawer() {
       const keyId = import.meta.env.VITE_RAZORPAY_KEY_ID
       if (!keyId) throw new Error('Payment is not configured (missing key).')
 
+      // Build order notes — embedded in the Razorpay order so the webhook can
+      // reconstruct the full order if the frontend verify call is ever lost.
+      const orderNotes = {
+        customerName: customer.name.trim().slice(0, 50),
+        customerEmail: customer.email.trim().toLowerCase().slice(0, 100),
+        customerPhone: customer.phone.trim().slice(0, 20),
+        address: formatAddressForStorage().slice(0, 200),
+        cartJson: buildCartNote(items),
+        userId: String(user?.uid || '').slice(0, 50),
+        userEmail: String(user?.email || '').slice(0, 100),
+      }
+
       const orderRes = await paymentsService.createRazorpayOrder({
         amount,
         currency: 'INR',
+        notes: orderNotes,
       })
+
+      // Snapshot cart NOW — before clearCart() can mutate the closure
+      const cartSnapshot = items.map((i) => ({
+        name: i.name,
+        quantity: Number(i.qty || 0),
+        price: Number(i.price || 0),
+        image: i.image || '',
+      }))
+
+      const addressSnapshot = formatAddressForStorage()
+
+      // Track whether Razorpay's success handler has fired so ondismiss knows
+      // whether to clear localStorage (no payment made) or leave it (payment made,
+      // recovery may be needed).
+      let handlerFired = false
 
       const options = {
         key: orderRes.keyId || keyId,
@@ -186,46 +226,78 @@ export default function CartDrawer() {
           contact: customer.phone,
         },
         notes: {
-          address: formatAddressForStorage(),
+          address: addressSnapshot,
         },
         handler: async (response) => {
-          try {
-            setLoading(true)
+          handlerFired = true
 
-            const verifyResult = await paymentsService.verifyRazorpayPayment({
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-              customer: {
-                name: customer.name.trim(),
-                email: customer.email.trim().toLowerCase(),
-                phone: customer.phone.trim(),
-              },
-              cart: items.map((i) => ({
-                name: i.name,
-                quantity: Number(i.qty || 0),
-                price: Number(i.price || 0),
-                image: i.image || '',
-              })),
-              address: formatAddressForStorage(),
-              total: Number(amount),
-              userId: user?.uid || null,
-              userEmail: user?.email || null,
-            })
-
-            clearCart()
-            setIsOpen(false)
-            setStep('cart')
-            navigate(`/order-placed/${verifyResult.orderId}`)
-          } catch (e) {
-            setError(e?.message || 'Payment completed, but order save failed. Please contact support with your Razorpay payment ID.')
-            setStep('checkout')
-          } finally {
-            setLoading(false)
+          // ── STEP 1: Save payment data to localStorage IMMEDIATELY ────────────
+          // This is our first safety net. If the network call below fails or the
+          // browser closes, PaymentRecovery.jsx will pick this up on the next visit
+          // and retry the verify call automatically.
+          const paymentData = {
+            razorpay_order_id: response.razorpay_order_id,
+            razorpay_payment_id: response.razorpay_payment_id,
+            razorpay_signature: response.razorpay_signature,
+            customer: {
+              name: customer.name.trim(),
+              email: customer.email.trim().toLowerCase(),
+              phone: customer.phone.trim(),
+            },
+            cart: cartSnapshot,
+            address: addressSnapshot,
+            total: Number(amount),
+            userId: user?.uid || null,
+            userEmail: user?.email || null,
           }
+          savePendingPayment(paymentData)
+
+          setLoading(true)
+
+          // ── STEP 2: Verify with up to 3 attempts (exponential-ish backoff) ──
+          const MAX_ATTEMPTS = 3
+          for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+            if (attempt > 0) {
+              // 1.5 s after first failure, 3 s after second
+              await new Promise((r) => setTimeout(r, 1500 * attempt))
+            }
+            try {
+              const verifyResult = await paymentsService.verifyRazorpayPayment(paymentData)
+              // ── Success ───────────────────────────────────────────────────────
+              clearPendingPayment()
+              clearCart()
+              setIsOpen(false)
+              setStep('cart')
+              navigate(`/order-placed/${verifyResult.orderId}`)
+              return
+            } catch (err) {
+              console.error(
+                `Order verify attempt ${attempt + 1}/${MAX_ATTEMPTS} failed:`,
+                err?.message,
+              )
+            }
+          }
+
+          // ── All 3 attempts failed ─────────────────────────────────────────────
+          // localStorage still holds the payment data — PaymentRecovery will retry
+          // on the next page load. Show the customer their payment ID so they can
+          // contact support even if auto-recovery also fails.
+          setError(
+            `Your payment was successful (Payment ID: ${response.razorpay_payment_id}). ` +
+            `We could not confirm your order automatically due to a connection problem. ` +
+            `Please take a screenshot of this message and contact us — we will process ` +
+            `your order manually within 24 hours. When you reload this page we will also ` +
+            `try to recover your order automatically.`,
+          )
+          setStep('checkout')
+          setLoading(false)
         },
         modal: {
           ondismiss: () => {
+            if (!handlerFired) {
+              // Payment was cancelled / not completed — clear any stale pending record
+              clearPendingPayment()
+            }
             setLoading(false)
           },
         },
@@ -306,7 +378,9 @@ export default function CartDrawer() {
           ) : step === 'checkout' ? (
             <div className="mt-4 space-y-4">
               {error ? (
-                <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>
+                <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 leading-relaxed">
+                  {error}
+                </div>
               ) : null}
 
               {/* Saved address picker */}
@@ -448,7 +522,7 @@ export default function CartDrawer() {
                 onClick={openPayment}
                 className="flex min-h-12 w-full items-center justify-center rounded-xl bg-brand-navy px-4 text-sm font-bold text-white hover:bg-brand-navy-light disabled:opacity-50"
               >
-                {loading ? 'Starting…' : `Pay Rs. ${formatMoney(subtotal)}`}
+                {loading ? 'Processing…' : `Pay Rs. ${formatMoney(subtotal)}`}
               </button>
             </div>
           ) : (

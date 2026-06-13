@@ -1,6 +1,7 @@
 import { Suspense, lazy, useEffect } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import CartDrawer from "./components/ecommerce/CartDrawer";
+import PaymentRecovery from "./components/PaymentRecovery";
 import ScrollToTop from "./components/ScrollToTop";
 import FloatingButtons from "./components/FloatingButtons";
 import { CartProvider } from "./hooks/useCart";
@@ -94,6 +95,7 @@ function App() {
           <CartProvider>
             <BrowserRouter>
               <ScrollToTop />
+              <PaymentRecovery />
               <Suspense fallback={Spinner}>
                 <Routes>
                   {/* Public routes */}

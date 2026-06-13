@@ -217,6 +217,7 @@ function getStatusLabel(status) {
   const normalized = String(status || "").trim().toLowerCase();
   if (normalized === "paid") return "Paid";
   if (normalized === "pending") return "Pending";
+  if (normalized === "dispatched") return "Dispatched";
   if (normalized === "shipped") return "Shipped";
   if (normalized === "cancelled_waiting_refund") return "Cancelled (Waiting to be refunded)";
   if (normalized === "cancelled_refunded") return "Cancelled and Refunded";
@@ -329,6 +330,8 @@ export default function AdminOrdersPage() {
         return "bg-green-100 text-green-700";
       case "pending":
         return "bg-yellow-100 text-yellow-700";
+      case "dispatched":
+        return "bg-orange-100 text-orange-700";
       case "shipped":
         return "bg-blue-100 text-blue-700";
       case "cancelled_waiting_refund":
@@ -411,11 +414,52 @@ export default function AdminOrdersPage() {
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Orders</h1>
-          <p className="text-gray-500 mt-1">
-            Manage customer orders and payment details
-          </p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Orders</h1>
+            <p className="text-gray-500 mt-1">
+              Manage customer orders and payment details
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (!orders.length) { window.alert("No orders to export."); return; }
+              const sorted = [...orders].sort((a, b) => {
+                const ta = parsePlacedDate(getPlacedOnValue(a))?.getTime() ?? 0;
+                const tb = parsePlacedDate(getPlacedOnValue(b))?.getTime() ?? 0;
+                return tb - ta;
+              });
+              const rows = sorted.map((order) => {
+                const placed = parsePlacedDate(getPlacedOnValue(order));
+                return {
+                  "Order ID": String(order.id ?? ""),
+                  "Order Date": placed ? placed.toISOString().slice(0, 10) : "",
+                  "Placed On": placed ? placed.toLocaleString("en-IN") : "-",
+                  "Customer Name": order.customerName || "",
+                  "Email": order.customerEmail || "",
+                  "Phone": order.customerPhone || "",
+                  "Alt Phone": order.customerAltPhone || "",
+                  "Address": getAddressText(order),
+                  "Items": summarizeLineItems(order),
+                  "Total (INR)": Math.round(Number(order.total || 0) * 100) / 100,
+                  "Status": getStatusLabel(order.status),
+                  "Tracking ID": order.trackingId || "",
+                  "Payment ID": order.razorpay_payment_id || "",
+                };
+              });
+              const wb = XLSX.utils.book_new();
+              XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "All Orders");
+              XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(buildDailySummaryRows(sorted)), "By Date");
+              const stamp = new Date().toISOString().slice(0, 10);
+              XLSX.writeFile(wb, `all-orders-${stamp}.xlsx`);
+            }}
+            disabled={loading || orders.length === 0}
+            className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Download className="h-4 w-4 shrink-0" />
+            Export All Orders
+          </button>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -487,6 +531,7 @@ export default function AdminOrdersPage() {
                 <option value="all">All orders</option>
                 <option value="pending">Pending only</option>
                 <option value="paid">Paid only</option>
+                <option value="dispatched">Dispatched only</option>
                 <option value="shipped">Shipped only</option>
                 <option value="cancelled_waiting_refund">
                   Cancelled (waiting to be refunded)
@@ -735,6 +780,7 @@ export default function AdminOrdersPage() {
                 >
                   <option value="paid">Paid</option>
                   <option value="pending">Pending</option>
+                  <option value="dispatched">Dispatched (Handed over to courier)</option>
                   <option value="shipped">Shipped</option>
                   <option value="cancelled_waiting_refund">
                     Cancelled (waiting to be refunded)
@@ -742,7 +788,7 @@ export default function AdminOrdersPage() {
                   <option value="cancelled_refunded">Cancelled and refunded</option>
                 </select>
                 <p className="text-xs text-gray-500">
-                  The customer receives an email whenever you change status (paid, pending, shipped, cancelled waiting refund, cancelled and refunded).
+                  The customer receives an email whenever you change status (paid, pending, dispatched, shipped, cancelled waiting refund, cancelled and refunded).
                 </p>
               </div>
 
@@ -780,7 +826,7 @@ export default function AdminOrdersPage() {
                 </p>
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex flex-wrap gap-3">
                 <button
                   onClick={() =>
                     handleStatusChange(
@@ -795,11 +841,45 @@ export default function AdminOrdersPage() {
                   Mark Shipped
                 </button>
                 <button
+                  onClick={() => {
+                    const order = selectedOrder;
+                    const placed = parsePlacedDate(getPlacedOnValue(order));
+                    const items = (order.items || []).map((item, i) => ({
+                      "#": i + 1,
+                      "Item Name": item.name || "",
+                      "Qty": Number(item.qty || item.quantity || 1),
+                      "Unit Price (INR)": Number(item.price || 0).toFixed(2),
+                      "Subtotal (INR)": (Number(item.price || 0) * Number(item.qty || item.quantity || 1)).toFixed(2),
+                    }));
+                    const summary = [{
+                      "Order ID": String(order.id ?? ""),
+                      "Date": placed ? placed.toLocaleString("en-IN") : "-",
+                      "Customer": order.customerName || "",
+                      "Email": order.customerEmail || "",
+                      "Phone": order.customerPhone || "",
+                      "Alt Phone": order.customerAltPhone || "",
+                      "Address": getAddressText(order),
+                      "Total (INR)": Number(order.total || 0).toFixed(2),
+                      "Status": getStatusLabel(order.status),
+                      "Tracking ID": order.trackingId || "",
+                      "Payment ID": order.razorpay_payment_id || "",
+                    }];
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summary), "Order Summary");
+                    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(items), "Items");
+                    XLSX.writeFile(wb, `order-${order.id}.xlsx`);
+                  }}
+                  className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+                >
+                  <Download className="h-4 w-4" />
+                  Download Order
+                </button>
+                <button
                   onClick={() => handleDelete(selectedOrder.id)}
                   className="px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition font-semibold inline-flex items-center gap-2"
                 >
                   <Trash2 className="h-4 w-4" />
-                  Delete Order
+                  Delete
                 </button>
                 <button
                   onClick={() => setShowModal(false)}

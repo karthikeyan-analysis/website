@@ -185,37 +185,38 @@ export default async function handler(req, res) {
       ...(userEmail ? { userId_email: String(userEmail).toLowerCase() } : {}),
     };
 
+    // Order written to Firestore — this is the point of no return.
+    // Respond to the client immediately so the browser isn't blocked by SMTP latency.
     await ref.set(record);
+    res.status(200).json({ success: true, orderId });
 
-    let emailError = null;
+    // Send emails after the response. Vercel keeps the lambda alive until this
+    // function returns, so emails will complete in the vast majority of cases.
+    // Cap at 7 s so we never hit the 10 s Vercel Hobby timeout.
     try {
-      await Promise.all([
-        sendOrderConfirmationEmail({
-          orderId,
-          customerName,
-          customerEmail,
-          items,
-          total: orderTotal,
-        }),
-        sendAdminOrderEmail({
-          orderId,
-          customerName,
-          customerEmail,
-          items,
-          total: orderTotal,
-          address: address || "",
-        }),
+      await Promise.race([
+        Promise.all([
+          sendOrderConfirmationEmail({
+            orderId,
+            customerName,
+            customerEmail,
+            items,
+            total: orderTotal,
+          }),
+          sendAdminOrderEmail({
+            orderId,
+            customerName,
+            customerEmail,
+            items,
+            total: orderTotal,
+            address: address || "",
+          }),
+        ]),
+        new Promise((resolve) => setTimeout(resolve, 7000)),
       ]);
     } catch (emailErr) {
       console.error("Order emails failed (order was saved successfully):", orderId, emailErr);
-      emailError = emailErr.message;
     }
-
-    res.status(200).json({
-      success: true,
-      orderId,
-      ...(emailError ? { emailWarning: "Order saved but email delivery failed: " + emailError } : {}),
-    });
   } catch (error) {
     console.error("Razorpay verify error:", error);
     res.status(500).json({ error: error.message || "Internal Server Error" });

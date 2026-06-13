@@ -19,7 +19,7 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "Razorpay is not configured" });
     }
 
-    const { amount, currency = "INR", receipt } = req.body || {};
+    const { amount, currency = "INR", receipt, notes } = req.body || {};
     const rupees = Number(amount);
     if (!Number.isFinite(rupees) || rupees <= 0) {
       return res.status(400).json({ error: "Invalid amount" });
@@ -42,6 +42,7 @@ export default async function handler(req, res) {
         amount: amountPaise,
         currency,
         receipt: finalReceipt,
+        ...(notes && typeof notes === "object" ? { notes } : {}),
       }),
     });
 

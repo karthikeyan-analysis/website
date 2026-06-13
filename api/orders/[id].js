@@ -161,7 +161,7 @@ export default async function handler(req, res) {
 
       // Send status update email (optional - will skip if not configured)
       if (
-        ["pending", "paid", "shipped", "cancelled_waiting_refund", "cancelled_refunded", "cancelled"].includes(
+        ["pending", "paid", "dispatched", "shipped", "cancelled_waiting_refund", "cancelled_refunded", "cancelled"].includes(
           String(status).toLowerCase(),
         )
       ) {
