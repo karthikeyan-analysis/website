@@ -1,6 +1,6 @@
 @import url("https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap");
 
-/* Book Antiqua Bold — kept only for .font-display (header title) */
+/* Book Antiqua Bolds — kept only for .font-display (header title) */
 @font-face {
   font-family: "Book Antiqua Bold";
   src: url("/fonts/bookantiqua_bold.ttf") format("truetype");
@@ -60,13 +60,20 @@
    * translateX goes 0 → -50% (= one full copy of the doubled text).
    */
   @keyframes offer-marquee {
-    0%   { transform: translateX(0)     translateY(-50%); }
-    100% { transform: translateX(-50%)  translateY(-50%); }
+    0% {
+      transform: translateX(0) translateY(-50%);
+    }
+    100% {
+      transform: translateX(-50%) translateY(-50%);
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
     @keyframes offer-marquee {
-      0%, 100% { transform: translateX(0) translateY(-50%); }
+      0%,
+      100% {
+        transform: translateX(0) translateY(-50%);
+      }
     }
   }
 
