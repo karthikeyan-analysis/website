@@ -8,6 +8,7 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from || "/";
+  const cartCheckout = !!location.state?.cartCheckout;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -53,7 +54,9 @@ export default function LoginPage() {
           </Link>
           <div className="text-center">
             <h1 className="text-2xl font-black text-brand-navy">Welcome Back</h1>
-            <p className="mt-1 text-sm text-slate-500">Sign in to your account</p>
+            <p className="mt-1 text-sm text-slate-500">
+              {cartCheckout ? 'Sign in to complete your purchase' : 'Sign in to your account'}
+            </p>
           </div>
         </div>
 

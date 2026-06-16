@@ -142,10 +142,10 @@ export default async function handler(req, res) {
       }
     });
 
-    // ── Parse timeline events using stable "tl11" layout class ───────────────
-    // Each .tl11 block: first child = date/time, last child = status/location
+    // ── Parse timeline events (.tl16 layout class as of 2026) ───────────────
+    // Each .tl16 block: first child = date/time, last child = status/location
     const events = [];
-    $(".tl11").each((_, block) => {
+    $(".tl16").each((_, block) => {
       const children = $(block).children("div").toArray();
       if (children.length < 2) return;
 

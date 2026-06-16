@@ -52,6 +52,19 @@ export default function CartDrawer() {
 
   const amount = useMemo(() => Number(subtotal || 0), [subtotal])
 
+  // After login, auto-reopen cart in checkout step if the user clicked
+  // "Proceed to Checkout" while not signed in (flag set in sessionStorage).
+  useEffect(() => {
+    if (!user) return
+    if (sessionStorage.getItem('pendingCartCheckout')) {
+      sessionStorage.removeItem('pendingCartCheckout')
+      if (items.length > 0) {
+        setIsOpen(true)
+        setStep('checkout')
+      }
+    }
+  }, [user])
+
   // Pre-fill from user profile when moving to checkout
   useEffect(() => {
     if (step !== 'checkout') return
@@ -506,10 +519,18 @@ export default function CartDrawer() {
             <button
               type="button"
               disabled={!canCheckout}
-              onClick={() => setStep('checkout')}
+              onClick={() => {
+                if (!user) {
+                  sessionStorage.setItem('pendingCartCheckout', '1')
+                  setIsOpen(false)
+                  navigate('/login', { state: { from: '/', cartCheckout: true } })
+                  return
+                }
+                setStep('checkout')
+              }}
               className="mt-3 flex min-h-12 w-full touch-manipulation items-center justify-center rounded-xl bg-brand-navy px-4 text-sm font-bold text-white shadow-card ring-1 ring-brand-navy/10 hover:bg-brand-navy-light disabled:opacity-50 sm:mt-4"
             >
-              Proceed to Checkout
+              {user ? 'Proceed to Checkout' : 'Sign in to Checkout'}
             </button>
           ) : step === 'checkout' ? (
             <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-4">

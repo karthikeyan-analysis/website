@@ -43,6 +43,7 @@ const BookStorePage = lazy(() => import("./pages/BookStorePage"));
 const ProductDetailsPage = lazy(() => import("./pages/ProductDetailsPage"));
 const OrderPlacedPage = lazy(() => import("./pages/OrderPlacedPage"));
 const TrackOrderPage = lazy(() => import("./pages/TrackOrderPage"));
+const EnrollmentPage = lazy(() => import("./pages/EnrollmentPage"));
 
 // Customer auth pages
 const LoginPage = lazy(() => import("./pages/LoginPage"));
@@ -115,6 +116,7 @@ function App() {
                   <Route path="/book-store/:id" element={<ProductDetailsPage />} />
                   <Route path="/order-placed/:id" element={<OrderPlacedPage />} />
                   <Route path="/track-order" element={<TrackOrderPage />} />
+                  <Route path="/enroll" element={<EnrollmentPage />} />
 
                   {/* Customer auth pages */}
                   <Route path="/login" element={<LoginPage />} />

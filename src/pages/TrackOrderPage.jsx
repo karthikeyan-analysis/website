@@ -41,6 +41,7 @@ function getStatusLabel(status) {
   const normalized = String(status || "").trim().toLowerCase();
   if (normalized === "paid") return "Paid";
   if (normalized === "pending") return "Pending";
+  if (normalized === "dispatched") return "Dispatched";
   if (normalized === "shipped") return "Shipped";
   if (normalized === "cancelled_waiting_refund") return "Cancelled (Waiting to be refunded)";
   if (normalized === "cancelled_refunded") return "Cancelled and Refunded";
@@ -135,6 +136,11 @@ export default function TrackOrderPage() {
                     <p className="mt-1 text-lg font-bold text-brand-navy">
                       {getStatusLabel(order.status)}
                     </p>
+                    {["paid", "dispatched"].includes(String(order.status || "").toLowerCase()) && (
+                      <p className="mt-2 text-xs text-brand-black/60 leading-relaxed">
+                        You will receive your tracking updates when your package has been shipped from the courier partner.
+                      </p>
+                    )}
                   </div>
                   <div className="rounded-xl border border-black/10 p-4">
                     <p className="text-xs font-semibold text-brand-black/60">Total</p>
