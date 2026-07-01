@@ -72,6 +72,7 @@ const AdminContactsPage = lazy(() => import("./pages/admin/AdminContactsPage"));
 const AdminTestimonialsPage = lazy(() => import("./pages/admin/AdminTestimonialsPage"));
 const AdminOfferBannerPage = lazy(() => import("./pages/admin/AdminOfferBannerPage"));
 const AdminCustomersPage = lazy(() => import("./pages/admin/AdminCustomersPage"));
+const AdminTestsPage = lazy(() => import("./pages/admin/AdminTestsPage"));
 
 const Spinner = (
   <div className="flex min-h-[50dvh] flex-col items-center justify-center gap-4 bg-slate-50 px-4">
@@ -146,6 +147,7 @@ function App() {
                   <Route path="/admin/testimonials" element={<ProtectedAdminRoute><AdminTestimonialsPage /></ProtectedAdminRoute>} />
                   <Route path="/admin/offer-banner" element={<ProtectedAdminRoute><AdminOfferBannerPage /></ProtectedAdminRoute>} />
                   <Route path="/admin/customers" element={<ProtectedAdminRoute><AdminCustomersPage /></ProtectedAdminRoute>} />
+                  <Route path="/admin/tests" element={<ProtectedAdminRoute><AdminTestsPage /></ProtectedAdminRoute>} />
 
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
