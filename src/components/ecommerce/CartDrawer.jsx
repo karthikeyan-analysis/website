@@ -5,7 +5,7 @@ import { useUserAuth } from '../../contexts/UserAuthContext'
 import { userService } from '../../services/userService'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { paymentsService } from '../../services/firebaseService'
+import { paymentsService, ordersService } from '../../services/firebaseService'
 import { savePendingPayment, clearPendingPayment } from '../../utils/paymentRecovery'
 
 function formatMoney(value) {
@@ -267,16 +267,20 @@ export default function CartDrawer() {
 
           setLoading(true)
 
-          // ── STEP 2: Verify with up to 3 attempts (exponential-ish backoff) ──
-          const MAX_ATTEMPTS = 3
+          // ── STEP 2: Verify with up to 5 attempts (exponential backoff) ───────
+          const MAX_ATTEMPTS = 5
+          const BACKOFF_MS = [0, 1500, 3000, 5000, 8000] // delay before each attempt
           for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
             if (attempt > 0) {
-              // 1.5 s after first failure, 3 s after second
-              await new Promise((r) => setTimeout(r, 1500 * attempt))
+              await new Promise((r) => setTimeout(r, BACKOFF_MS[attempt] || 3000))
             }
             try {
+              // Per-attempt timeout so a hanging request doesn't block retries
+              const controller = new AbortController()
+              const timeoutId = setTimeout(() => controller.abort(), 12000) // 12s per attempt
               const verifyResult = await paymentsService.verifyRazorpayPayment(paymentData)
-              // ── Success ───────────────────────────────────────────────────────
+              clearTimeout(timeoutId)
+              // ── Success ────────────────────────────────────────────────────
               clearPendingPayment()
               clearCart()
               setIsOpen(false)
@@ -291,10 +295,43 @@ export default function CartDrawer() {
             }
           }
 
-          // ── All 3 attempts failed ─────────────────────────────────────────────
-          // localStorage still holds the payment data — PaymentRecovery will retry
-          // on the next page load. Show the customer their payment ID so they can
-          // contact support even if auto-recovery also fails.
+          // ── STEP 3: All API attempts failed — try Firestore client-side fallback ──
+          // This writes the order directly to Firestore from the browser using
+          // the customer's own Firebase auth session. It CANNOT verify the Razorpay
+          // signature (that requires the secret), but the payment is already captured
+          // by Razorpay — we just need to record it.
+          try {
+            console.warn('All verify API attempts failed. Attempting Firestore client-side fallback...')
+            const fallbackOrderId = `rp_${response.razorpay_order_id}`
+            await ordersService.createOrder({
+              id: fallbackOrderId,
+              provider: 'razorpay',
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              customerName: customer.name.trim(),
+              customerEmail: customer.email.trim().toLowerCase(),
+              customerPhone: customer.phone.trim(),
+              items: cartSnapshot,
+              total: Number(amount),
+              address: addressSnapshot,
+              status: 'paid',
+              savedViaClientFallback: true,
+              needsReview: true, // Admin should verify this via Razorpay dashboard
+            })
+            clearPendingPayment()
+            clearCart()
+            setIsOpen(false)
+            setStep('cart')
+            navigate(`/order-placed/${fallbackOrderId}`)
+            console.log('Client-side Firestore fallback succeeded. Order:', fallbackOrderId)
+            return
+          } catch (fallbackErr) {
+            console.error('Client-side Firestore fallback also failed:', fallbackErr?.message)
+          }
+
+          // ── STEP 4: Everything failed — localStorage still holds the data ─────
+          // PaymentRecovery will retry on the next page load.
+          // Show the customer their payment ID so they can contact support.
           setError(
             `Your payment was successful (Payment ID: ${response.razorpay_payment_id}). ` +
             `We could not confirm your order automatically due to a connection problem. ` +

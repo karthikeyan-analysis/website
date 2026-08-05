@@ -2,7 +2,12 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "functions": {
-    "api/track.js": { "maxDuration": 30 }
+    "api/track.js": { "maxDuration": 30 },
+    "api/payments/razorpay/verify.js": { "maxDuration": 30 },
+    "api/payments/razorpay/webhook.js": { "maxDuration": 30 },
+    "api/payments/razorpay/order.js": { "maxDuration": 30 },
+    "api/orders/index.js": { "maxDuration": 30 },
+    "api/orders/[id].js": { "maxDuration": 30 }
   },
   "env": {
     "VITE_FIREBASE_API_KEY": "AIzaSyDyaqfAq7x0U9N_BARkopTwD3WcsCOpopI",

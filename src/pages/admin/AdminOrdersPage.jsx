@@ -352,9 +352,10 @@ export default function AdminOrdersPage() {
       acc.revenue += Number.isFinite(total) ? total : 0;
       if (status === "pending") acc.pending += 1;
       if (status === "paid") acc.paid += 1;
+      if (order.needsReview) acc.needsReview += 1;
       return acc;
     },
-    { totalOrders: 0, pending: 0, paid: 0, revenue: 0 },
+    { totalOrders: 0, pending: 0, paid: 0, revenue: 0, needsReview: 0 },
   );
 
   const exportFilteredOrders = useMemo(
@@ -462,7 +463,7 @@ export default function AdminOrdersPage() {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
           <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
             <p className="text-xs font-semibold uppercase text-gray-500">Total Orders</p>
             <p className="mt-2 text-2xl font-bold text-gray-900">
@@ -485,6 +486,13 @@ export default function AdminOrdersPage() {
               ₹{formatMoney(orderStats.revenue)}
             </p>
           </div>
+          {orderStats.needsReview > 0 && (
+            <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 shadow-sm">
+              <p className="text-xs font-semibold uppercase text-amber-700">⚠ Needs Review</p>
+              <p className="mt-2 text-2xl font-bold text-amber-800">{orderStats.needsReview}</p>
+              <p className="text-xs text-amber-600 mt-1">Verify via Razorpay dashboard</p>
+            </div>
+          )}
         </div>
 
         <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm space-y-4">
@@ -617,6 +625,17 @@ export default function AdminOrdersPage() {
                         >
                           {getStatusLabel(order.status)}
                         </span>
+                        {order.needsReview && (
+                          <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700 border border-amber-300" title="Customer details may be incomplete — verify via Razorpay dashboard">
+                            ⚠ Review
+                          </span>
+                        )}
+                        {order.recoveredViaWebhook && (
+                          <div className="mt-1 text-xs text-amber-600">Webhook recovered</div>
+                        )}
+                        {order.savedViaClientFallback && (
+                          <div className="mt-1 text-xs text-orange-600">Client fallback</div>
+                        )}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600">
                         {formatDate(getPlacedOnValue(order))}
@@ -657,6 +676,18 @@ export default function AdminOrdersPage() {
             </div>
 
             <div className="p-6 space-y-6">
+              {selectedOrder.needsReview && (
+                <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3">
+                  <p className="text-sm font-bold text-amber-800">⚠️ Action Required — Incomplete Order Data</p>
+                  <p className="text-sm text-amber-700 mt-1">
+                    This order was captured but customer details may be incomplete. Please verify via the
+                    Razorpay dashboard using Payment ID:{" "}
+                    <span className="font-mono font-bold">{selectedOrder.razorpay_payment_id || "—"}</span>.
+                    {selectedOrder.recoveredViaWebhook && " (Recovered via webhook)"}
+                    {selectedOrder.savedViaClientFallback && " (Saved via client-side fallback — signature not verified server-side)"}
+                  </p>
+                </div>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-gray-500 font-semibold">CUSTOMER NAME</p>

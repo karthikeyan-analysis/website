@@ -15,7 +15,7 @@ import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { CheckCircle2, AlertTriangle, Loader2, X } from 'lucide-react'
 import { getPendingPayment, clearPendingPayment } from '../utils/paymentRecovery'
-import { paymentsService } from '../services/firebaseService'
+import { paymentsService, ordersService } from '../services/firebaseService'
 
 export default function PaymentRecovery() {
   const location = useLocation()
@@ -43,10 +43,11 @@ export default function PaymentRecovery() {
     setState('recovering')
 
     const tryRecover = async () => {
-      const MAX_ATTEMPTS = 3
+      const MAX_ATTEMPTS = 5
+      const BACKOFF_MS = [0, 2000, 4000, 6000, 10000]
       for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
         if (cancelled) return
-        if (attempt > 0) await new Promise((r) => setTimeout(r, 2000 * attempt))
+        if (attempt > 0) await new Promise((r) => setTimeout(r, BACKOFF_MS[attempt] || 4000))
         try {
           const result = await paymentsService.verifyRazorpayPayment(pending)
           if (cancelled) return
@@ -57,6 +58,39 @@ export default function PaymentRecovery() {
           console.warn(`PaymentRecovery attempt ${attempt + 1}/${MAX_ATTEMPTS}:`, err?.message)
         }
       }
+
+      if (cancelled) return
+
+      // All API attempts failed — try client-side Firestore fallback
+      // The payment is real (Razorpay captured it), we just need to record it.
+      try {
+        console.warn('PaymentRecovery: all API attempts failed. Trying Firestore fallback...')
+        const fallbackOrderId = `rp_${pending.razorpay_order_id}`
+        await ordersService.createOrder({
+          id: fallbackOrderId,
+          provider: 'razorpay',
+          razorpay_order_id: pending.razorpay_order_id,
+          razorpay_payment_id: pending.razorpay_payment_id,
+          customerName: pending.customer?.name || '',
+          customerEmail: pending.customer?.email || '',
+          customerPhone: pending.customer?.phone || '',
+          items: pending.cart || [],
+          total: Number(pending.total || 0),
+          address: pending.address || '',
+          status: 'paid',
+          savedViaClientFallback: true,
+          recoveredViaRecoveryComponent: true,
+          needsReview: true,
+        })
+        if (!cancelled) {
+          clearPendingPayment()
+          setState({ type: 'success', orderId: fallbackOrderId })
+        }
+        return
+      } catch (fallbackErr) {
+        console.error('PaymentRecovery: Firestore fallback also failed:', fallbackErr?.message)
+      }
+
       if (!cancelled) {
         setState({ type: 'failed', paymentId: pending.razorpay_payment_id })
       }

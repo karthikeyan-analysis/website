@@ -1,5 +1,5 @@
 const STORAGE_KEY = "ka_pending_payment";
-const MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
+const MAX_AGE_MS = 72 * 60 * 60 * 1000; // 72 hours — covers weekend/holiday failures
 
 export function savePendingPayment(data) {
   try {
