@@ -60,7 +60,10 @@ export const productsService = {
     try {
       const q = query(collection(db, "products"), orderBy("createdAt", "desc"));
       const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+      return querySnapshot.docs.map((item) => ({
+        id: item.id,
+        ...item.data(),
+      }));
     } catch (error) {
       console.error("Error fetching products:", error);
       throw error;
@@ -87,7 +90,10 @@ export const productsService = {
         orderBy("createdAt", "desc"),
       );
       const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+      return querySnapshot.docs.map((item) => ({
+        id: item.id,
+        ...item.data(),
+      }));
     } catch (error) {
       console.error("Error fetching product reviews:", error);
       throw error;
@@ -111,7 +117,11 @@ export const productsService = {
       if (!data.productId) throw new Error("productId is required");
       if (!data.name) throw new Error("Name is required");
       if (!data.email) throw new Error("Email is required");
-      if (!Number.isInteger(data.rating) || data.rating < 1 || data.rating > 5) {
+      if (
+        !Number.isInteger(data.rating) ||
+        data.rating < 1 ||
+        data.rating > 5
+      ) {
         throw new Error("Rating must be between 1 and 5");
       }
       if (!data.review) throw new Error("Review is required");
@@ -132,7 +142,9 @@ export const productsService = {
         updatedAt: new Date(),
       });
       const snap = await getDoc(ref);
-      return snap.exists() ? { id: snap.id, ...snap.data() } : { id: productId };
+      return snap.exists()
+        ? { id: snap.id, ...snap.data() }
+        : { id: productId };
     } catch (error) {
       console.error("Error updating product:", error);
       throw error;
@@ -170,7 +182,9 @@ export const contactsService = {
       try {
         const submission = {
           name: String(contactData?.name ?? "").trim(),
-          email: String(contactData?.email ?? "").trim().toLowerCase(),
+          email: String(contactData?.email ?? "")
+            .trim()
+            .toLowerCase(),
           phone: String(contactData?.phone ?? "").trim(),
           subject: normalizeContactSubject(contactData),
           message: String(contactData?.message ?? "").trim(),
@@ -237,9 +251,15 @@ export const contactsService = {
 
   async getContacts() {
     try {
-      const q = query(collection(db, "contacts"), orderBy("submittedAt", "desc"));
+      const q = query(
+        collection(db, "contacts"),
+        orderBy("submittedAt", "desc"),
+      );
       const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+      return querySnapshot.docs.map((item) => ({
+        id: item.id,
+        ...item.data(),
+      }));
     } catch (error) {
       console.error("Error fetching contacts:", error);
       throw error;
@@ -278,7 +298,10 @@ export const categoriesService = {
     try {
       const q = query(collection(db, "categories"), orderBy("name", "asc"));
       const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+      return querySnapshot.docs.map((item) => ({
+        id: item.id,
+        ...item.data(),
+      }));
     } catch (error) {
       console.error("Error fetching categories:", error);
       throw error;
@@ -342,7 +365,9 @@ export const categoriesService = {
       };
       await updateDoc(ref, update);
       const snap = await getDoc(ref);
-      return snap.exists() ? { id: snap.id, ...snap.data() } : { id, ...update };
+      return snap.exists()
+        ? { id: snap.id, ...snap.data() }
+        : { id, ...update };
     } catch (error) {
       console.error("Error updating category:", error);
       throw error;
@@ -426,7 +451,8 @@ function serializeOrderPayloadForOrdersApi(order) {
     id,
     customerName: String(order?.customerName ?? "").trim(),
     customerEmail: String(order?.customerEmail ?? "").trim(),
-    customerPhone: order?.customerPhone != null ? String(order.customerPhone) : "",
+    customerPhone:
+      order?.customerPhone != null ? String(order.customerPhone) : "",
     customerAltPhone:
       order?.customerAltPhone != null ? String(order.customerAltPhone) : "",
     items,
@@ -436,13 +462,18 @@ function serializeOrderPayloadForOrdersApi(order) {
     razorpay_order_id:
       order?.razorpay_order_id != null ? String(order.razorpay_order_id) : "",
     razorpay_payment_id:
-      order?.razorpay_payment_id != null ? String(order.razorpay_payment_id) : "",
+      order?.razorpay_payment_id != null
+        ? String(order.razorpay_payment_id)
+        : "",
     status: order?.status != null ? String(order.status) : "Paid",
     paymentStatus:
       order?.paymentStatus != null ? String(order.paymentStatus) : "",
-    createdAt: isoFromFirestoreMaybe(order?.createdAt) ?? order?.createdAt ?? null,
-    orderDate: isoFromFirestoreMaybe(order?.orderDate) ?? order?.orderDate ?? null,
-    updatedAt: isoFromFirestoreMaybe(order?.updatedAt) ?? order?.updatedAt ?? null,
+    createdAt:
+      isoFromFirestoreMaybe(order?.createdAt) ?? order?.createdAt ?? null,
+    orderDate:
+      isoFromFirestoreMaybe(order?.orderDate) ?? order?.orderDate ?? null,
+    updatedAt:
+      isoFromFirestoreMaybe(order?.updatedAt) ?? order?.updatedAt ?? null,
   };
 }
 
@@ -493,7 +524,10 @@ export const ordersService = {
     try {
       const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
       const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+      return querySnapshot.docs.map((item) => ({
+        id: item.id,
+        ...item.data(),
+      }));
     } catch (error) {
       console.error("Error fetching orders:", error);
       throw error;
@@ -517,7 +551,9 @@ export const ordersService = {
       const ref = doc(db, "orders", String(id));
       await updateDoc(ref, { ...statusData, updatedAt: new Date() });
       const snap = await getDoc(ref);
-      const updatedOrder = snap.exists() ? { id: snap.id, ...snap.data() } : { id };
+      const updatedOrder = snap.exists()
+        ? { id: snap.id, ...snap.data() }
+        : { id };
       const emailResult = await ordersService.sendOrderStatusEmail(
         updatedOrder,
         String(statusData?.status ?? ""),
@@ -535,7 +571,10 @@ export const ordersService = {
   async updateTrackingId(id, trackingId) {
     try {
       const ref = doc(db, "orders", String(id));
-      await updateDoc(ref, { trackingId: String(trackingId || "").trim(), updatedAt: new Date() });
+      await updateDoc(ref, {
+        trackingId: String(trackingId || "").trim(),
+        updatedAt: new Date(),
+      });
       return true;
     } catch (error) {
       console.error("Error updating tracking ID:", error);
@@ -806,9 +845,7 @@ export const offerTickerService = {
 
   normalizeMessages(raw) {
     if (!Array.isArray(raw)) return [];
-    return raw
-      .map((m) => String(m ?? "").trim())
-      .filter(Boolean);
+    return raw.map((m) => String(m ?? "").trim()).filter(Boolean);
   },
 
   async getOfferTicker() {
@@ -870,7 +907,10 @@ export const offerTickerService = {
 };
 
 // Ongoing Batches Service
-const ONGOING_BATCHES_DOC = { collection: "siteSettings", id: "ongoingBatches" };
+const ONGOING_BATCHES_DOC = {
+  collection: "siteSettings",
+  id: "ongoingBatches",
+};
 
 export const DEFAULT_ONGOING_BATCHES = [
   {
@@ -925,7 +965,11 @@ export const ongoingBatchesService = {
 
   async getOngoingBatches() {
     try {
-      const ref = doc(db, ONGOING_BATCHES_DOC.collection, ONGOING_BATCHES_DOC.id);
+      const ref = doc(
+        db,
+        ONGOING_BATCHES_DOC.collection,
+        ONGOING_BATCHES_DOC.id,
+      );
       const snap = await getDoc(ref);
       if (!snap.exists()) return this.getDefaultBatches();
       const data = snap.data();
@@ -948,7 +992,11 @@ export const ongoingBatchesService = {
         }
         const data = snap.data();
         const batches = ongoingBatchesService.normalizeBatches(data.batches);
-        callback(batches.length > 0 ? batches : ongoingBatchesService.getDefaultBatches());
+        callback(
+          batches.length > 0
+            ? batches
+            : ongoingBatchesService.getDefaultBatches(),
+        );
       },
       (error) => {
         console.error("Ongoing batches subscription error:", error);
@@ -959,7 +1007,11 @@ export const ongoingBatchesService = {
 
   async saveOngoingBatches(batches) {
     try {
-      const ref = doc(db, ONGOING_BATCHES_DOC.collection, ONGOING_BATCHES_DOC.id);
+      const ref = doc(
+        db,
+        ONGOING_BATCHES_DOC.collection,
+        ONGOING_BATCHES_DOC.id,
+      );
       const cleaned = this.normalizeBatches(batches);
       await setDoc(
         ref,
@@ -976,4 +1028,3 @@ export const ongoingBatchesService = {
     }
   },
 };
-

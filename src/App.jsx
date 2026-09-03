@@ -64,20 +64,35 @@ const ShippingPolicyPage = lazy(() => import("./pages/ShippingPolicyPage"));
 
 // Admin Pages
 const AdminLoginPage = lazy(() => import("./pages/admin/AdminLoginPage"));
-const AdminDashboardPage = lazy(() => import("./pages/admin/AdminDashboardPage"));
+const AdminDashboardPage = lazy(
+  () => import("./pages/admin/AdminDashboardPage"),
+);
 const AdminProductsPage = lazy(() => import("./pages/admin/AdminProductsPage"));
-const AdminCategoriesPage = lazy(() => import("./pages/admin/AdminCategoriesPage"));
+const AdminCategoriesPage = lazy(
+  () => import("./pages/admin/AdminCategoriesPage"),
+);
 const AdminOrdersPage = lazy(() => import("./pages/admin/AdminOrdersPage"));
 const AdminContactsPage = lazy(() => import("./pages/admin/AdminContactsPage"));
-const AdminTestimonialsPage = lazy(() => import("./pages/admin/AdminTestimonialsPage"));
-const AdminOfferBannerPage = lazy(() => import("./pages/admin/AdminOfferBannerPage"));
-const AdminCustomersPage = lazy(() => import("./pages/admin/AdminCustomersPage"));
+const AdminTestimonialsPage = lazy(
+  () => import("./pages/admin/AdminTestimonialsPage"),
+);
+const AdminOfferBannerPage = lazy(
+  () => import("./pages/admin/AdminOfferBannerPage"),
+);
+const AdminCustomersPage = lazy(
+  () => import("./pages/admin/AdminCustomersPage"),
+);
 const AdminBatchesPage = lazy(() => import("./pages/admin/AdminBatchesPage"));
 
 const Spinner = (
   <div className="flex min-h-[50dvh] flex-col items-center justify-center gap-4 bg-slate-50 px-4">
-    <div className="h-10 w-10 animate-spin rounded-full border-2 border-brand-navy border-t-transparent" aria-hidden="true" />
-    <p className="text-sm font-semibold tracking-tight text-brand-navy">Loading…</p>
+    <div
+      className="h-10 w-10 animate-spin rounded-full border-2 border-brand-navy border-t-transparent"
+      aria-hidden="true"
+    />
+    <p className="text-sm font-semibold tracking-tight text-brand-navy">
+      Loading…
+    </p>
   </div>
 );
 
@@ -106,7 +121,10 @@ function App() {
                   <Route path="/group-i" element={<GroupIPage />} />
                   <Route path="/group-ii" element={<GroupIIPage />} />
                   <Route path="/group-i-ii" element={<GroupPage />} />
-                  <Route path="/statistical-services" element={<StatisticalPage />} />
+                  <Route
+                    path="/statistical-services"
+                    element={<StatisticalPage />}
+                  />
                   <Route path="/trb-courses" element={<TrbPage />} />
                   <Route path="/trb-ug" element={<TrbUGPage />} />
                   <Route path="/trb-pg" element={<TrbPGPage />} />
@@ -114,40 +132,159 @@ function App() {
                   <Route path="/achievements" element={<AchievementsPage />} />
                   <Route path="/contact" element={<ContactPage />} />
                   <Route path="/book-store" element={<BookStorePage />} />
-                  <Route path="/book-store/:id" element={<ProductDetailsPage />} />
-                  <Route path="/order-placed/:id" element={<OrderPlacedPage />} />
+                  <Route
+                    path="/book-store/:id"
+                    element={<ProductDetailsPage />}
+                  />
+                  <Route
+                    path="/order-placed/:id"
+                    element={<OrderPlacedPage />}
+                  />
                   <Route path="/track-order" element={<TrackOrderPage />} />
                   <Route path="/enroll" element={<EnrollmentPage />} />
 
                   {/* Customer auth pages */}
                   <Route path="/login" element={<LoginPage />} />
                   <Route path="/signup" element={<SignupPage />} />
-                  <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                  <Route
+                    path="/forgot-password"
+                    element={<ForgotPasswordPage />}
+                  />
 
                   {/* Customer account pages (require login) */}
-                  <Route path="/profile" element={<ProtectedUserRoute><ProfilePage /></ProtectedUserRoute>} />
-                  <Route path="/my-orders" element={<ProtectedUserRoute><MyOrdersPage /></ProtectedUserRoute>} />
-                  <Route path="/addresses" element={<ProtectedUserRoute><AddressesPage /></ProtectedUserRoute>} />
-                  <Route path="/wishlist" element={<ProtectedUserRoute><WishlistPage /></ProtectedUserRoute>} />
+                  <Route
+                    path="/profile"
+                    element={
+                      <ProtectedUserRoute>
+                        <ProfilePage />
+                      </ProtectedUserRoute>
+                    }
+                  />
+                  <Route
+                    path="/my-orders"
+                    element={
+                      <ProtectedUserRoute>
+                        <MyOrdersPage />
+                      </ProtectedUserRoute>
+                    }
+                  />
+                  <Route
+                    path="/addresses"
+                    element={
+                      <ProtectedUserRoute>
+                        <AddressesPage />
+                      </ProtectedUserRoute>
+                    }
+                  />
+                  <Route
+                    path="/wishlist"
+                    element={
+                      <ProtectedUserRoute>
+                        <WishlistPage />
+                      </ProtectedUserRoute>
+                    }
+                  />
 
                   {/* Policy Routes */}
-                  <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
-                  <Route path="/terms-conditions" element={<TermsConditionsPage />} />
+                  <Route
+                    path="/privacy-policy"
+                    element={<PrivacyPolicyPage />}
+                  />
+                  <Route
+                    path="/terms-conditions"
+                    element={<TermsConditionsPage />}
+                  />
                   <Route path="/refund-policy" element={<RefundPolicyPage />} />
-                  <Route path="/shipping-policy" element={<ShippingPolicyPage />} />
+                  <Route
+                    path="/shipping-policy"
+                    element={<ShippingPolicyPage />}
+                  />
 
                   {/* Admin Routes */}
-                  <Route path="/admin/login" element={<PublicAdminRoute><AdminLoginPage /></PublicAdminRoute>} />
-                  <Route path="/admin/signup" element={<Navigate to="/admin/login" replace />} />
-                  <Route path="/admin/dashboard" element={<ProtectedAdminRoute><AdminDashboardPage /></ProtectedAdminRoute>} />
-                  <Route path="/admin/categories" element={<ProtectedAdminRoute><AdminCategoriesPage /></ProtectedAdminRoute>} />
-                  <Route path="/admin/products" element={<ProtectedAdminRoute><AdminProductsPage /></ProtectedAdminRoute>} />
-                  <Route path="/admin/orders" element={<ProtectedAdminRoute><AdminOrdersPage /></ProtectedAdminRoute>} />
-                  <Route path="/admin/batches" element={<ProtectedAdminRoute><AdminBatchesPage /></ProtectedAdminRoute>} />
-                  <Route path="/admin/contacts" element={<ProtectedAdminRoute><AdminContactsPage /></ProtectedAdminRoute>} />
-                  <Route path="/admin/testimonials" element={<ProtectedAdminRoute><AdminTestimonialsPage /></ProtectedAdminRoute>} />
-                  <Route path="/admin/offer-banner" element={<ProtectedAdminRoute><AdminOfferBannerPage /></ProtectedAdminRoute>} />
-                  <Route path="/admin/customers" element={<ProtectedAdminRoute><AdminCustomersPage /></ProtectedAdminRoute>} />
+                  <Route
+                    path="/admin/login"
+                    element={
+                      <PublicAdminRoute>
+                        <AdminLoginPage />
+                      </PublicAdminRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/signup"
+                    element={<Navigate to="/admin/login" replace />}
+                  />
+                  <Route
+                    path="/admin/dashboard"
+                    element={
+                      <ProtectedAdminRoute>
+                        <AdminDashboardPage />
+                      </ProtectedAdminRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/categories"
+                    element={
+                      <ProtectedAdminRoute>
+                        <AdminCategoriesPage />
+                      </ProtectedAdminRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/products"
+                    element={
+                      <ProtectedAdminRoute>
+                        <AdminProductsPage />
+                      </ProtectedAdminRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/orders"
+                    element={
+                      <ProtectedAdminRoute>
+                        <AdminOrdersPage />
+                      </ProtectedAdminRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/batches"
+                    element={
+                      <ProtectedAdminRoute>
+                        <AdminBatchesPage />
+                      </ProtectedAdminRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/contacts"
+                    element={
+                      <ProtectedAdminRoute>
+                        <AdminContactsPage />
+                      </ProtectedAdminRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/testimonials"
+                    element={
+                      <ProtectedAdminRoute>
+                        <AdminTestimonialsPage />
+                      </ProtectedAdminRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/offer-banner"
+                    element={
+                      <ProtectedAdminRoute>
+                        <AdminOfferBannerPage />
+                      </ProtectedAdminRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/customers"
+                    element={
+                      <ProtectedAdminRoute>
+                        <AdminCustomersPage />
+                      </ProtectedAdminRoute>
+                    }
+                  />
 
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>

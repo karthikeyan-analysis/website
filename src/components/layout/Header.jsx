@@ -79,7 +79,9 @@ function HoverNavDropdown({ menuId, label, items }) {
         role="menu"
         aria-labelledby={`${menuId}-trigger`}
         className={`absolute left-0 top-full z-[250] pt-2 transition duration-150 ${
-          open ? "pointer-events-auto visible opacity-100" : "pointer-events-none invisible opacity-0"
+          open
+            ? "pointer-events-auto visible opacity-100"
+            : "pointer-events-none invisible opacity-0"
         }`}
       >
         <div className="w-[13.5rem] overflow-hidden rounded-xl bg-brand-cta/95 p-1 shadow-soft backdrop-blur">
@@ -111,7 +113,8 @@ function UserDropdown({ user, userProfile, logout }) {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const displayName = userProfile?.name || user?.email?.split("@")[0] || "Account";
+  const displayName =
+    userProfile?.name || user?.email?.split("@")[0] || "Account";
   const initial = displayName[0].toUpperCase();
 
   const handleLogout = async () => {
@@ -197,7 +200,9 @@ export default function Header() {
               to="/"
               className={({ isActive }) =>
                 `rounded-md px-2.5 py-1.5 text-xs font-semibold transition lg:px-3 lg:text-[13px] ${
-                  isActive ? "bg-white/20 text-white" : "text-white/90 hover:bg-white/10 hover:text-white"
+                  isActive
+                    ? "bg-white/20 text-white"
+                    : "text-white/90 hover:bg-white/10 hover:text-white"
                 }`
               }
             >
@@ -207,7 +212,9 @@ export default function Header() {
               to="/about"
               className={({ isActive }) =>
                 `rounded-md px-2.5 py-1.5 text-xs font-semibold transition lg:px-3 lg:text-[13px] ${
-                  isActive ? "bg-white/20 text-white" : "text-white/90 hover:bg-white/10 hover:text-white"
+                  isActive
+                    ? "bg-white/20 text-white"
+                    : "text-white/90 hover:bg-white/10 hover:text-white"
                 }`
               }
             >
@@ -225,7 +232,9 @@ export default function Header() {
               to="/statistical-services"
               className={({ isActive }) =>
                 `rounded-md px-2.5 py-1.5 text-xs font-semibold transition lg:px-3 lg:text-[13px] ${
-                  isActive ? "bg-white/20 text-white" : "text-white/90 hover:bg-white/10 hover:text-white"
+                  isActive
+                    ? "bg-white/20 text-white"
+                    : "text-white/90 hover:bg-white/10 hover:text-white"
                 }`
               }
             >
@@ -243,7 +252,9 @@ export default function Header() {
               to="/batches"
               className={({ isActive }) =>
                 `rounded-md px-2.5 py-1.5 text-xs font-semibold transition lg:px-3 lg:text-[13px] ${
-                  isActive ? "bg-white/20 text-white" : "text-white/90 hover:bg-white/10 hover:text-white"
+                  isActive
+                    ? "bg-white/20 text-white"
+                    : "text-white/90 hover:bg-white/10 hover:text-white"
                 }`
               }
             >
@@ -253,7 +264,9 @@ export default function Header() {
               to="/achievements"
               className={({ isActive }) =>
                 `rounded-md px-2.5 py-1.5 text-xs font-semibold transition lg:px-3 lg:text-[13px] ${
-                  isActive ? "bg-white/20 text-white" : "text-white/90 hover:bg-white/10 hover:text-white"
+                  isActive
+                    ? "bg-white/20 text-white"
+                    : "text-white/90 hover:bg-white/10 hover:text-white"
                 }`
               }
             >
@@ -263,7 +276,9 @@ export default function Header() {
               to="/contact"
               className={({ isActive }) =>
                 `rounded-md px-2.5 py-1.5 text-xs font-semibold transition lg:px-3 lg:text-[13px] ${
-                  isActive ? "bg-white/20 text-white" : "text-white/90 hover:bg-white/10 hover:text-white"
+                  isActive
+                    ? "bg-white/20 text-white"
+                    : "text-white/90 hover:bg-white/10 hover:text-white"
                 }`
               }
             >
@@ -278,7 +293,10 @@ export default function Header() {
                 className="inline-flex min-h-9 touch-manipulation items-center justify-center gap-1.5 rounded-md bg-brand-green px-3 py-1.5 text-xs font-bold text-white ring-1 ring-brand-green/60 transition animate-blink hover:bg-brand-green/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-green/50 focus-visible:ring-offset-2 focus-visible:ring-offset-brand-cta"
               >
                 Student login
-                <ExternalLink className="size-3.5 shrink-0 opacity-90" aria-hidden />
+                <ExternalLink
+                  className="size-3.5 shrink-0 opacity-90"
+                  aria-hidden
+                />
               </a>
               <Link
                 to="/book-store"
@@ -306,7 +324,11 @@ export default function Header() {
 
               {/* Customer auth nav */}
               {user ? (
-                <UserDropdown user={user} userProfile={userProfile} logout={logout} />
+                <UserDropdown
+                  user={user}
+                  userProfile={userProfile}
+                  logout={logout}
+                />
               ) : (
                 <Link
                   to="/login"
@@ -365,7 +387,11 @@ export default function Header() {
             <div className="pointer-events-none absolute -right-10 -top-10 size-40 rounded-full bg-white/[0.05]" />
             <div className="pointer-events-none absolute -bottom-6 -left-6 size-28 rounded-full bg-white/[0.04]" />
             <div className="relative flex items-center justify-between gap-3">
-              <Link to="/" onClick={() => setMobileOpen(false)} className="flex items-center gap-3">
+              <Link
+                to="/"
+                onClick={() => setMobileOpen(false)}
+                className="flex items-center gap-3"
+              >
                 <img
                   src="/logo.jpeg"
                   alt="Karthikeyan Analysis"
@@ -398,7 +424,10 @@ export default function Header() {
                 className="flex min-h-10 touch-manipulation items-center justify-center gap-1.5 rounded-lg bg-brand-navy px-3 text-[12px] font-bold text-white shadow-xs transition hover:bg-brand-navy/90 active:bg-brand-navy/80"
                 onClick={() => setMobileOpen(false)}
               >
-                <UserCheck className="size-4 shrink-0 text-emerald-300" aria-hidden />
+                <UserCheck
+                  className="size-4 shrink-0 text-emerald-300"
+                  aria-hidden
+                />
                 Attend CBT Test (Hall Ticket Login)
               </a>
               <div className="grid grid-cols-2 gap-2">
@@ -446,7 +475,9 @@ export default function Header() {
                       to={to}
                       onClick={() => setMobileOpen(false)}
                       className={`flex min-h-11 touch-manipulation items-center gap-3 px-4 py-2.5 text-[14px] font-semibold transition active:bg-brand-navy/[0.06] ${
-                        location.pathname === to ? "bg-brand-navy/[0.07] text-brand-navy" : "text-brand-black hover:bg-black/[0.03]"
+                        location.pathname === to
+                          ? "bg-brand-navy/[0.07] text-brand-navy"
+                          : "text-brand-black hover:bg-black/[0.03]"
                       } ${i < arr.length - 1 ? "border-b border-black/[0.07]" : ""}`}
                     >
                       <Icon className="size-4 shrink-0 text-brand-black/40" />
@@ -456,7 +487,10 @@ export default function Header() {
                   ))}
                 </div>
                 <button
-                  onClick={async () => { await logout(); setMobileOpen(false); }}
+                  onClick={async () => {
+                    await logout();
+                    setMobileOpen(false);
+                  }}
                   className="mb-4 flex w-full items-center gap-2 rounded-xl px-4 py-2.5 text-[13px] font-semibold text-red-600 transition hover:bg-red-50"
                 >
                   <LogOut className="size-4" />
@@ -510,13 +544,18 @@ export default function Header() {
                   >
                     <span
                       className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${
-                        location.pathname === to ? "bg-brand-navy text-white" : "bg-black/[0.05] text-brand-black/60"
+                        location.pathname === to
+                          ? "bg-brand-navy text-white"
+                          : "bg-black/[0.05] text-brand-black/60"
                       }`}
                     >
                       <Icon className="size-4" aria-hidden />
                     </span>
                     {label}
-                    <ChevronRight className="ml-auto size-4 text-brand-black/25" aria-hidden />
+                    <ChevronRight
+                      className="ml-auto size-4 text-brand-black/25"
+                      aria-hidden
+                    />
                   </Link>
                 </li>
               ))}
@@ -536,10 +575,14 @@ export default function Header() {
                   to={to}
                   onClick={() => setMobileOpen(false)}
                   className={`flex min-h-11 touch-manipulation items-center gap-3 px-4 py-2.5 text-[14px] font-semibold transition active:bg-brand-navy/[0.06] ${
-                    location.pathname === to ? "bg-brand-navy/[0.07] text-brand-navy" : "text-brand-black hover:bg-black/[0.03]"
+                    location.pathname === to
+                      ? "bg-brand-navy/[0.07] text-brand-navy"
+                      : "text-brand-black hover:bg-black/[0.03]"
                   } ${i < arr.length - 1 ? "border-b border-black/[0.07]" : ""}`}
                 >
-                  <Star className={`size-3.5 shrink-0 ${location.pathname === to ? "text-brand-navy" : "text-brand-black/30"}`} />
+                  <Star
+                    className={`size-3.5 shrink-0 ${location.pathname === to ? "text-brand-navy" : "text-brand-black/30"}`}
+                  />
                   {label}
                   <ChevronRight className="ml-auto size-4 text-brand-black/25" />
                 </Link>
@@ -559,10 +602,14 @@ export default function Header() {
                   to={to}
                   onClick={() => setMobileOpen(false)}
                   className={`flex min-h-11 touch-manipulation items-center gap-3 px-4 py-2.5 text-[14px] font-semibold transition active:bg-brand-navy/[0.06] ${
-                    location.pathname === to ? "bg-brand-navy/[0.07] text-brand-navy" : "text-brand-black hover:bg-black/[0.03]"
+                    location.pathname === to
+                      ? "bg-brand-navy/[0.07] text-brand-navy"
+                      : "text-brand-black hover:bg-black/[0.03]"
                   } ${i < arr.length - 1 ? "border-b border-black/[0.07]" : ""}`}
                 >
-                  <BookOpen className={`size-3.5 shrink-0 ${location.pathname === to ? "text-brand-navy" : "text-brand-black/30"}`} />
+                  <BookOpen
+                    className={`size-3.5 shrink-0 ${location.pathname === to ? "text-brand-navy" : "text-brand-black/30"}`}
+                  />
                   {label}
                   <ChevronRight className="ml-auto size-4 text-brand-black/25" />
                 </Link>
@@ -593,10 +640,30 @@ export default function Header() {
             </div>
             <div className="flex items-center justify-center gap-3">
               {[
-                { icon: "fa-brands fa-telegram", href: "https://t.me/karthikeyananalysis", color: "#2599CE", label: "Telegram" },
-                { icon: "fa-brands fa-instagram", href: "https://www.instagram.com/karthikeyan_analysis?igsh=ZWw2ZGd6ZnEyeHA=", color: "#E4405F", label: "Instagram" },
-                { icon: "fa-brands fa-youtube", href: "https://youtube.com/@karthikeyananalysis", color: "#FF0000", label: "YouTube" },
-                { icon: "fa-brands fa-whatsapp", href: "https://wa.me/message/LNAXQMM3G4OBM1", color: "#25D366", label: "WhatsApp" },
+                {
+                  icon: "fa-brands fa-telegram",
+                  href: "https://t.me/karthikeyananalysis",
+                  color: "#2599CE",
+                  label: "Telegram",
+                },
+                {
+                  icon: "fa-brands fa-instagram",
+                  href: "https://www.instagram.com/karthikeyan_analysis?igsh=ZWw2ZGd6ZnEyeHA=",
+                  color: "#E4405F",
+                  label: "Instagram",
+                },
+                {
+                  icon: "fa-brands fa-youtube",
+                  href: "https://youtube.com/@karthikeyananalysis",
+                  color: "#FF0000",
+                  label: "YouTube",
+                },
+                {
+                  icon: "fa-brands fa-whatsapp",
+                  href: "https://wa.me/message/LNAXQMM3G4OBM1",
+                  color: "#25D366",
+                  label: "WhatsApp",
+                },
               ].map(({ icon, href, color, label }) => (
                 <a
                   key={label}
@@ -606,7 +673,11 @@ export default function Header() {
                   aria-label={label}
                   className="flex size-9 touch-manipulation items-center justify-center rounded-full bg-white ring-1 ring-black/[0.08] transition active:scale-95"
                 >
-                  <i className={`${icon} text-[15px] leading-none`} style={{ color }} aria-hidden />
+                  <i
+                    className={`${icon} text-[15px] leading-none`}
+                    style={{ color }}
+                    aria-hidden
+                  />
                 </a>
               ))}
             </div>

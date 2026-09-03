@@ -68,7 +68,10 @@ export default function BatchesPage() {
                     const status = batch.status || batch[3] || "Closed";
 
                     return (
-                      <tr key={batch.id || index} className="border-t border-black/10 hover:bg-black/5 transition-colors">
+                      <tr
+                        key={batch.id || index}
+                        className="border-t border-black/10 hover:bg-black/5 transition-colors"
+                      >
                         <td className="px-6 py-5 whitespace-nowrap">{date}</td>
                         <td className="px-6 py-5 font-semibold text-brand-navy">
                           {course}
@@ -88,7 +91,9 @@ export default function BatchesPage() {
                           )}
                         </td>
                         <td className="px-6 py-5">
-                          <Badge tone={status === "Open" ? "success" : "danger"}>
+                          <Badge
+                            tone={status === "Open" ? "success" : "danger"}
+                          >
                             {status}
                           </Badge>
                         </td>
