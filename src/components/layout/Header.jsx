@@ -23,6 +23,7 @@ import {
   Star,
   Trophy,
   User,
+  UserCheck,
   Users,
   X,
 } from "lucide-react";
@@ -389,25 +390,37 @@ export default function Header() {
               </button>
             </div>
 
-            <div className="relative mt-4 grid grid-cols-2 gap-2">
+            <div className="relative mt-4 flex flex-col gap-2">
               <a
-                href="https://karthikeyananalysisstudycircle.vercel.app/login"
+                href="https://karthikeyananalysisstudycircle.vercel.app/public/login"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex min-h-10 touch-manipulation items-center justify-center gap-1.5 rounded-lg bg-brand-green px-3 text-[12px] font-bold text-white ring-1 ring-brand-green/60 transition animate-blink hover:bg-brand-green/90 active:bg-brand-green/80"
+                className="flex min-h-10 touch-manipulation items-center justify-center gap-1.5 rounded-lg bg-brand-navy px-3 text-[12px] font-bold text-white shadow-xs transition hover:bg-brand-navy/90 active:bg-brand-navy/80"
                 onClick={() => setMobileOpen(false)}
               >
-                <GraduationCap className="size-3.5 shrink-0" aria-hidden />
-                Student Login
+                <UserCheck className="size-4 shrink-0 text-emerald-300" aria-hidden />
+                Attend CBT Test (Hall Ticket Login)
               </a>
-              <Link
-                to="/book-store"
-                onClick={() => setMobileOpen(false)}
-                className="flex min-h-10 touch-manipulation items-center justify-center gap-1.5 rounded-lg bg-brand-orange px-3 text-[12px] font-bold text-white ring-1 ring-brand-orange/60 transition active:opacity-80"
-              >
-                <ShoppingBag className="size-3.5 shrink-0" aria-hidden />
-                Book Store
-              </Link>
+              <div className="grid grid-cols-2 gap-2">
+                <a
+                  href="https://karthikeyananalysisstudycircle.vercel.app/login"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex min-h-10 touch-manipulation items-center justify-center gap-1.5 rounded-lg bg-brand-green px-3 text-[12px] font-bold text-white ring-1 ring-brand-green/60 transition animate-blink hover:bg-brand-green/90 active:bg-brand-green/80"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  <GraduationCap className="size-3.5 shrink-0" aria-hidden />
+                  Student Login
+                </a>
+                <Link
+                  to="/book-store"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex min-h-10 touch-manipulation items-center justify-center gap-1.5 rounded-lg bg-brand-orange px-3 text-[12px] font-bold text-white ring-1 ring-brand-orange/60 transition active:opacity-80"
+                >
+                  <ShoppingBag className="size-3.5 shrink-0" aria-hidden />
+                  Book Store
+                </Link>
+              </div>
             </div>
           </div>
 

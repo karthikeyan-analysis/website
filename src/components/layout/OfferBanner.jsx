@@ -1,24 +1,12 @@
-import { Megaphone } from "lucide-react";
+import { ExternalLink, Megaphone, Sparkles, UserCheck } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { offerTickerService } from "../../services/firebaseService";
 
-/*
- * HOW THIS MARQUEE WORKS (the only approach that never breaks mobile layout):
- *
- * 1. The clip wrapper is `position: relative; overflow: hidden`.
- *    Its width is set by its flex parent (never by children).
- *
- * 2. The track is `position: absolute` — completely OUT of document flow.
- *    An absolutely-positioned element cannot expand its parent's intrinsic width.
- *
- * 3. The track contains the text TWICE. The keyframe goes:
- *       translateX(0)  →  translateX(-50%)
- *    Because the track is 2× the text width, -50% = exactly one text width,
- *    producing a seamless infinite loop.
- *
- * 4. translateY(-50%) centres the text vertically inside the clip box.
- */
+const STUDENT_PORTAL_PUBLIC_LOGIN =
+  "https://karthikeyananalysisstudycircle.vercel.app/public/login";
+const STUDENT_PORTAL_PUBLIC_REGISTER =
+  "https://karthikeyananalysisstudycircle.vercel.app/public/register";
 
 export default function OfferBanner() {
   const location = useLocation();
@@ -47,7 +35,7 @@ export default function OfferBanner() {
   const textStyle = {
     display: "inline-block",
     padding: "0 2.5rem",
-    fontSize: "14px",
+    fontSize: "13px",
     lineHeight: "1.125rem",
     fontWeight: 600,
     letterSpacing: "-0.01em",
@@ -60,14 +48,14 @@ export default function OfferBanner() {
       style={{ width: "100%", overflow: "hidden" }}
       className="border-y border-black/[0.06] bg-slate-100"
     >
-      {/* Row: icon + clip box */}
+      {/* Row: icon + clip box + hall ticket action buttons */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
           gap: "8px",
-          padding: "5px 16px",
-          maxWidth: "80rem",
+          padding: "5px 12px",
+          maxWidth: "85rem",
           margin: "0 auto",
         }}
       >
@@ -83,7 +71,6 @@ export default function OfferBanner() {
         {/*
          * CLIP BOX — position:relative + overflow:hidden + explicit height.
          * flex:1 + minWidth:0 fills remaining row space without overflowing.
-         * The fixed height is essential when the track is absolutely positioned.
          */}
         <div
           style={{
@@ -91,17 +78,13 @@ export default function OfferBanner() {
             minWidth: 0,
             position: "relative",
             overflow: "hidden",
-            height: "1.125rem",
+            height: "1.25rem",
           }}
         >
           {/* Accessible text for screen readers */}
           <p className="sr-only">{line}</p>
 
-          {/*
-           * TRACK — position:absolute takes it OUT of layout flow.
-           * It can never widen the page. top:50% + translateY(-50%) centres it.
-           * The animation is defined in index.css as @keyframes offer-marquee.
-           */}
+          {/* TRACK */}
           <div
             aria-hidden
             style={{
@@ -116,6 +99,35 @@ export default function OfferBanner() {
             <span style={textStyle}>{line}</span>
             <span style={textStyle}>{line}</span>
           </div>
+        </div>
+
+        {/* Action Button: Attend CBT Test using Hall Ticket Credentials */}
+        <div
+          style={{ flexShrink: 0 }}
+          className="flex items-center gap-1.5 pl-1"
+        >
+          <a
+            href={STUDENT_PORTAL_PUBLIC_LOGIN}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 rounded-md bg-brand-navy px-2.5 py-1 text-[11px] font-bold text-white shadow-xs transition hover:bg-brand-navy/90 active:scale-95 ring-1 ring-brand-navy/30 sm:text-xs sm:px-3"
+            title="Attend CBT Mock Test using your Hall Ticket Username & Passcode"
+          >
+            <UserCheck className="h-3 w-3 text-emerald-300 sm:h-3.5 sm:w-3.5" />
+            <span>Attend Test (Hall Ticket)</span>
+            <ExternalLink className="h-2.5 w-2.5 opacity-80" />
+          </a>
+
+          <a
+            href={STUDENT_PORTAL_PUBLIC_REGISTER}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden sm:inline-flex items-center gap-1 rounded-md bg-white border border-slate-300 px-2 py-1 text-[11px] font-semibold text-slate-700 shadow-xs hover:bg-slate-50 transition"
+            title="Register for Free Online CBT Mock Test"
+          >
+            <Sparkles className="h-3 w-3 text-amber-500" />
+            <span>Register Test</span>
+          </a>
         </div>
       </div>
     </div>
