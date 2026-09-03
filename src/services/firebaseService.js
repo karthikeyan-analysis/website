@@ -868,3 +868,112 @@ export const offerTickerService = {
     }
   },
 };
+
+// Ongoing Batches Service
+const ONGOING_BATCHES_DOC = { collection: "siteSettings", id: "ongoingBatches" };
+
+export const DEFAULT_ONGOING_BATCHES = [
+  {
+    id: "batch_1",
+    commencementDate: "08.October.2025",
+    courseName: "SURE SHOT STAT MISSION-26 (Integrated Course)",
+    brochureUrl:
+      "https://drive.google.com/file/d/12plNT5TUl0SdWp5DuEnJ5YPb4e6huPdS/view?usp=sharing",
+    status: "Closed",
+  },
+  {
+    id: "batch_2",
+    commencementDate: "26.January.2026",
+    courseName: "STAT MASTERS-26 (Exclusive Course)",
+    brochureUrl:
+      "https://drive.google.com/file/d/1p90EvIw1NuusJKUFrZ0-jsP38VQ8xtl0/view?usp=sharing",
+    status: "Closed",
+  },
+  {
+    id: "batch_3",
+    commencementDate: "01.March.2026",
+    courseName: "UG TRB MATHS BATCH (Full Course)",
+    brochureUrl:
+      "https://drive.google.com/file/d/1BpDvLk1n8Lf1s-tXZVnIPlIyMkMDWxE7/view?usp=sharing",
+    status: "Closed",
+  },
+  {
+    id: "batch_4",
+    commencementDate: "01.May.2026",
+    courseName: "STAT WIN-26 (Crash Course)",
+    brochureUrl:
+      "https://drive.google.com/file/d/1DHDwlsJR9DJsB_QRgfCixnevTV91DdAl/view?usp=sharing",
+    status: "Open",
+  },
+];
+
+export const ongoingBatchesService = {
+  getDefaultBatches() {
+    return JSON.parse(JSON.stringify(DEFAULT_ONGOING_BATCHES));
+  },
+
+  normalizeBatches(raw) {
+    if (!Array.isArray(raw)) return [];
+    return raw.map((b, index) => ({
+      id: b.id || `batch_${Date.now()}_${index}`,
+      commencementDate: String(b.commencementDate || "").trim(),
+      courseName: String(b.courseName || "").trim(),
+      brochureUrl: String(b.brochureUrl || "").trim(),
+      status: b.status === "Open" ? "Open" : "Closed",
+    }));
+  },
+
+  async getOngoingBatches() {
+    try {
+      const ref = doc(db, ONGOING_BATCHES_DOC.collection, ONGOING_BATCHES_DOC.id);
+      const snap = await getDoc(ref);
+      if (!snap.exists()) return this.getDefaultBatches();
+      const data = snap.data();
+      const batches = this.normalizeBatches(data.batches);
+      return batches.length > 0 ? batches : this.getDefaultBatches();
+    } catch (error) {
+      console.error("Error fetching ongoing batches:", error);
+      return this.getDefaultBatches();
+    }
+  },
+
+  subscribeOngoingBatches(callback) {
+    const ref = doc(db, ONGOING_BATCHES_DOC.collection, ONGOING_BATCHES_DOC.id);
+    return onSnapshot(
+      ref,
+      (snap) => {
+        if (!snap.exists()) {
+          callback(ongoingBatchesService.getDefaultBatches());
+          return;
+        }
+        const data = snap.data();
+        const batches = ongoingBatchesService.normalizeBatches(data.batches);
+        callback(batches.length > 0 ? batches : ongoingBatchesService.getDefaultBatches());
+      },
+      (error) => {
+        console.error("Ongoing batches subscription error:", error);
+        callback(ongoingBatchesService.getDefaultBatches());
+      },
+    );
+  },
+
+  async saveOngoingBatches(batches) {
+    try {
+      const ref = doc(db, ONGOING_BATCHES_DOC.collection, ONGOING_BATCHES_DOC.id);
+      const cleaned = this.normalizeBatches(batches);
+      await setDoc(
+        ref,
+        {
+          batches: cleaned,
+          updatedAt: new Date(),
+        },
+        { merge: true },
+      );
+      return cleaned;
+    } catch (error) {
+      console.error("Error saving ongoing batches:", error);
+      throw error;
+    }
+  },
+};
+

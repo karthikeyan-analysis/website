@@ -6,6 +6,7 @@ import {
   Mail,
   TrendingUp,
   DollarSign,
+  Calendar,
 } from "lucide-react";
 import {
   productsService,
@@ -153,6 +154,19 @@ export default function AdminDashboardPage() {
                 <h3 className="text-xl font-bold text-gray-900">View Orders</h3>
                 <p className="text-gray-500 text-sm mt-2">
                   Check order details and update statuses
+                </p>
+              </a>
+
+              <a
+                href="/admin/batches"
+                className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition border-2 border-transparent hover:border-amber-500"
+              >
+                <Calendar className="h-8 w-8 text-amber-600 mb-3" />
+                <h3 className="text-xl font-bold text-gray-900">
+                  Ongoing Batches
+                </h3>
+                <p className="text-gray-500 text-sm mt-2">
+                  Update commencement dates, course names, and brochure links
                 </p>
               </a>
 

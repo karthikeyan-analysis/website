@@ -13,6 +13,7 @@ import {
   MessageCircle,
   Megaphone,
   Users,
+  Calendar,
 } from "lucide-react";
 import { useAdminAuth } from "../../contexts/AdminAuthContext";
 
@@ -42,6 +43,11 @@ const AdminLayout = ({ children }) => {
       name: "Orders",
       href: "/admin/orders",
       icon: ShoppingCart,
+    },
+    {
+      name: "Ongoing Batches",
+      href: "/admin/batches",
+      icon: Calendar,
     },
     {
       name: "Contact Messages",

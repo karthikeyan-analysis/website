@@ -1,37 +1,28 @@
+import { useState, useEffect } from "react";
 import PageLayout from "../components/layout/PageLayout";
 import Badge from "../components/ui/Badge";
 import Card from "../components/ui/Card";
 import Container from "../components/ui/Container";
 import SectionHeader from "../components/ui/SectionHeader";
-
-const batches = [
-  [
-    "08.October.2025",
-    "SURE SHOT STAT MISSION-26 (Integrated Course)",
-    "https://drive.google.com/file/d/12plNT5TUl0SdWp5DuEnJ5YPb4e6huPdS/view?usp=sharing",
-    "Closed",
-  ],
-  [
-    "26.January.2026",
-    "STAT MASTERS-26 (Exclusive Course)",
-    "https://drive.google.com/file/d/1p90EvIw1NuusJKUFrZ0-jsP38VQ8xtl0/view?usp=sharing",
-    "Closed",
-  ],
-  [
-    "01.March.2026",
-    "UG TRB MATHS BATCH (Full Course)",
-    "https://drive.google.com/file/d/1BpDvLk1n8Lf1s-tXZVnIPlIyMkMDWxE7/view?usp=sharing",
-    "Closed",
-  ],
-  [
-    "01.May.2026",
-    "STAT WIN-26 (Crash Course)",
-    "https://drive.google.com/file/d/1DHDwlsJR9DJsB_QRgfCixnevTV91DdAl/view?usp=sharing",
-    "Open",
-  ],
-];
+import {
+  ongoingBatchesService,
+  DEFAULT_ONGOING_BATCHES,
+} from "../services/firebaseService";
 
 export default function BatchesPage() {
+  const [batches, setBatches] = useState(DEFAULT_ONGOING_BATCHES);
+
+  useEffect(() => {
+    const unsub = ongoingBatchesService.subscribeOngoingBatches((data) => {
+      if (data && data.length > 0) {
+        setBatches(data);
+      }
+    });
+    return () => {
+      if (typeof unsub === "function") unsub();
+    };
+  }, []);
+
   return (
     <PageLayout
       title="Our Batches"
@@ -70,29 +61,40 @@ export default function BatchesPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {batches.map(([date, course, brochure, status]) => (
-                    <tr key={course} className="border-t border-black/10">
-                      <td className="px-6 py-5">{date}</td>
-                      <td className="px-6 py-5 font-semibold text-brand-navy">
-                        {course}
-                      </td>
-                      <td className="px-6 py-5">
-                        <a
-                          href={brochure}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-semibold text-brand-blue underline underline-offset-4 hover:text-brand-navy"
-                        >
-                          Click Here
-                        </a>
-                      </td>
-                      <td className="px-6 py-5">
-                        <Badge tone={status === "Open" ? "success" : "danger"}>
-                          {status}
-                        </Badge>
-                      </td>
-                    </tr>
-                  ))}
+                  {batches.map((batch, index) => {
+                    const date = batch.commencementDate || batch[0] || "";
+                    const course = batch.courseName || batch[1] || "";
+                    const brochure = batch.brochureUrl || batch[2] || "";
+                    const status = batch.status || batch[3] || "Closed";
+
+                    return (
+                      <tr key={batch.id || index} className="border-t border-black/10 hover:bg-black/5 transition-colors">
+                        <td className="px-6 py-5 whitespace-nowrap">{date}</td>
+                        <td className="px-6 py-5 font-semibold text-brand-navy">
+                          {course}
+                        </td>
+                        <td className="px-6 py-5">
+                          {brochure ? (
+                            <a
+                              href={brochure}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="font-semibold text-brand-blue underline underline-offset-4 hover:text-brand-navy inline-flex items-center gap-1"
+                            >
+                              Click Here
+                            </a>
+                          ) : (
+                            <span className="text-gray-400">—</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-5">
+                          <Badge tone={status === "Open" ? "success" : "danger"}>
+                            {status}
+                          </Badge>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
