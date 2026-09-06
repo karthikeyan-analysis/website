@@ -66,7 +66,9 @@ export default function AdminBatchesPage() {
       return true;
     } catch (e) {
       console.error("Failed to save ongoing batches:", e);
-      setError(e?.message || "Failed to save batches to website. Please try again.");
+      setError(
+        e?.message || "Failed to save batches to website. Please try again.",
+      );
       return false;
     } finally {
       setSaving(false);
@@ -123,7 +125,12 @@ export default function AdminBatchesPage() {
 
   const handleDelete = async (index) => {
     const target = batches[index];
-    if (!confirm(`Are you sure you want to delete "${target?.courseName || 'this batch'}"? It will be removed from the live website immediately.`)) return;
+    if (
+      !confirm(
+        `Are you sure you want to delete "${target?.courseName || "this batch"}"? It will be removed from the live website immediately.`,
+      )
+    )
+      return;
     const updated = batches.filter((_, i) => i !== index);
     await persistBatches(updated, "Batch deleted from website successfully!");
   };
@@ -155,11 +162,17 @@ export default function AdminBatchesPage() {
       return;
     }
     const defaults = ongoingBatchesService.getDefaultBatches();
-    await persistBatches(defaults, "Batches reset to default 4 courses on website!");
+    await persistBatches(
+      defaults,
+      "Batches reset to default 4 courses on website!",
+    );
   };
 
   const handleSaveToCloud = async () => {
-    await persistBatches(batches, "Ongoing Batches table updated and published to the website successfully!");
+    await persistBatches(
+      batches,
+      "Ongoing Batches table updated and published to the website successfully!",
+    );
   };
 
   return (
@@ -173,7 +186,8 @@ export default function AdminBatchesPage() {
               Our Ongoing Batches
             </h1>
             <p className="mt-1.5 text-gray-600 text-sm">
-              Manage the course schedule and ongoing batches table displayed on the public website (/batches).
+              Manage the course schedule and ongoing batches table displayed on
+              the public website (/batches).
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -222,7 +236,10 @@ export default function AdminBatchesPage() {
         {success && (
           <div className="rounded-xl border border-green-200 bg-green-50 p-4 flex items-center gap-3 text-green-800 text-sm font-semibold shadow-xs">
             <CheckCircle className="h-5 w-5 text-green-600 shrink-0" />
-            <p>Ongoing Batches table updated and published to the website successfully!</p>
+            <p>
+              Ongoing Batches table updated and published to the website
+              successfully!
+            </p>
           </div>
         )}
 
@@ -249,24 +266,34 @@ export default function AdminBatchesPage() {
             </div>
           ) : batches.length === 0 ? (
             <div className="p-12 text-center text-sm text-gray-500">
-              No batches currently in the table. Click "Add New Batch" to create one.
+              No batches currently in the table. Click "Add New Batch" to create
+              one.
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead className="bg-brand-navy text-white text-xs">
                   <tr>
-                    <th className="px-4 py-3.5 font-bold w-12 text-center">#</th>
+                    <th className="px-4 py-3.5 font-bold w-12 text-center">
+                      #
+                    </th>
                     <th className="px-6 py-3.5 font-bold">Commencement Date</th>
                     <th className="px-6 py-3.5 font-bold">Course Name</th>
-                    <th className="px-6 py-3.5 font-bold">Course Brochure Link</th>
+                    <th className="px-6 py-3.5 font-bold">
+                      Course Brochure Link
+                    </th>
                     <th className="px-6 py-3.5 font-bold">Admission Status</th>
-                    <th className="px-4 py-3.5 font-bold text-right">Actions</th>
+                    <th className="px-4 py-3.5 font-bold text-right">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {batches.map((batch, index) => (
-                    <tr key={batch.id || index} className="hover:bg-gray-50/80 transition-colors">
+                    <tr
+                      key={batch.id || index}
+                      className="hover:bg-gray-50/80 transition-colors"
+                    >
                       <td className="px-4 py-4 text-center font-mono text-gray-400 text-xs">
                         {index + 1}
                       </td>
@@ -291,7 +318,9 @@ export default function AdminBatchesPage() {
                         )}
                       </td>
                       <td className="px-6 py-4">
-                        <Badge tone={batch.status === "Open" ? "success" : "danger"}>
+                        <Badge
+                          tone={batch.status === "Open" ? "success" : "danger"}
+                        >
                           {batch.status}
                         </Badge>
                       </td>
@@ -348,7 +377,9 @@ export default function AdminBatchesPage() {
           <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-gray-100 pb-3">
               <h3 className="text-lg font-bold text-gray-900">
-                {editingIndex !== null ? "Edit Batch Details" : "Add New Course Batch"}
+                {editingIndex !== null
+                  ? "Edit Batch Details"
+                  : "Add New Course Batch"}
               </h3>
               <button
                 type="button"
@@ -370,7 +401,10 @@ export default function AdminBatchesPage() {
                   placeholder="e.g. 01.May.2026 or 26.January.2026"
                   value={formData.commencementDate}
                   onChange={(e) =>
-                    setFormData({ ...formData, commencementDate: e.target.value })
+                    setFormData({
+                      ...formData,
+                      commencementDate: e.target.value,
+                    })
                   }
                   className="w-full rounded-lg border border-gray-300 px-3.5 py-2 text-sm focus:border-brand-navy focus:outline-none focus:ring-1 focus:ring-brand-navy"
                 />
@@ -406,7 +440,8 @@ export default function AdminBatchesPage() {
                   className="w-full rounded-lg border border-gray-300 px-3.5 py-2 text-sm focus:border-brand-navy focus:outline-none focus:ring-1 focus:ring-brand-navy"
                 />
                 <p className="text-[11px] text-gray-400 mt-1">
-                  Link to PDF brochure (Google Drive, Cloud storage, or website asset).
+                  Link to PDF brochure (Google Drive, Cloud storage, or website
+                  asset).
                 </p>
               </div>
 
@@ -445,8 +480,8 @@ export default function AdminBatchesPage() {
                   {saving
                     ? "Saving to website..."
                     : editingIndex !== null
-                    ? "Update & Publish"
-                    : "Add & Publish"}
+                      ? "Update & Publish"
+                      : "Add & Publish"}
                 </Button>
               </div>
             </form>

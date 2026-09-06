@@ -1,11 +1,14 @@
-import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
-import Badge from '../ui/Badge'
-import Button from '../ui/Button'
-import Card from '../ui/Card'
-import Container from '../ui/Container'
-import SectionHeader from '../ui/SectionHeader'
-import { ongoingBatchesService, DEFAULT_ONGOING_BATCHES } from '../../services/firebaseService'
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import Badge from "../ui/Badge";
+import Button from "../ui/Button";
+import Card from "../ui/Card";
+import Container from "../ui/Container";
+import SectionHeader from "../ui/SectionHeader";
+import {
+  ongoingBatchesService,
+  DEFAULT_ONGOING_BATCHES,
+} from "../../services/firebaseService";
 
 export default function BatchesSection() {
   const [batches, setBatches] = useState(DEFAULT_ONGOING_BATCHES);
@@ -55,16 +58,28 @@ export default function BatchesSection() {
                   const status = batch.status || "Closed";
 
                   return (
-                    <tr key={batch.id || index} className="border-t border-black/10">
-                      <td className="px-6 py-5 text-brand-black/80 whitespace-nowrap">{date}</td>
-                      <td className="px-6 py-5 font-semibold text-brand-navy">{course}</td>
+                    <tr
+                      key={batch.id || index}
+                      className="border-t border-black/10"
+                    >
+                      <td className="px-6 py-5 text-brand-black/80 whitespace-nowrap">
+                        {date}
+                      </td>
+                      <td className="px-6 py-5 font-semibold text-brand-navy">
+                        {course}
+                      </td>
                       <td className="px-6 py-5">
-                        <Badge tone={status === 'Open' ? 'success' : 'danger'}>{status}</Badge>
+                        <Badge tone={status === "Open" ? "success" : "danger"}>
+                          {status}
+                        </Badge>
                       </td>
                       <td className="px-6 py-5">
                         {brochure ? (
                           <a href={brochure} target="_blank" rel="noreferrer">
-                            <Button variant="secondary" className="px-3 py-2 text-xs">
+                            <Button
+                              variant="secondary"
+                              className="px-3 py-2 text-xs"
+                            >
                               Download
                             </Button>
                           </a>
@@ -74,7 +89,9 @@ export default function BatchesSection() {
                       </td>
                       <td className="px-6 py-5">
                         <Link to="/contact">
-                          <Button className="px-3 py-2 text-xs">Apply Now</Button>
+                          <Button className="px-3 py-2 text-xs">
+                            Apply Now
+                          </Button>
                         </Link>
                       </td>
                     </tr>
@@ -82,10 +99,9 @@ export default function BatchesSection() {
                 })}
               </tbody>
             </table>
-
           </Card>
         </div>
       </Container>
     </section>
-  )
+  );
 }

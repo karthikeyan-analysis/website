@@ -1014,7 +1014,8 @@ export const ongoingBatchesService = {
       const snap = await getDoc(ref);
       if (!snap.exists()) return this.getDefaultBatches();
       const data = snap.data();
-      if (!data || !Array.isArray(data.batches)) return this.getDefaultBatches();
+      if (!data || !Array.isArray(data.batches))
+        return this.getDefaultBatches();
       const batches = this.normalizeBatches(data.batches);
       return batches.length > 0 ? batches : this.getDefaultBatches();
     } catch (error) {
