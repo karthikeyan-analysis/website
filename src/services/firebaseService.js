@@ -906,6 +906,47 @@ export const offerTickerService = {
   },
 };
 
+// Portal & Website Button Visibility Settings Service
+const PORTAL_SETTINGS_DOC = { collection: "siteSettings", id: "portalLogin" };
+
+export const portalVisibilityService = {
+  getDefaultSettings() {
+    return {
+      showGuestLoginButton: true,
+      showWebsiteCbtButton: true,
+      showWebsiteRegisterButton: true,
+      showWebsiteStudentLoginButton: true,
+      allowPublicCbtRegistration: true,
+    };
+  },
+
+  subscribeSettings(callback) {
+    const ref = doc(db, PORTAL_SETTINGS_DOC.collection, PORTAL_SETTINGS_DOC.id);
+    return onSnapshot(
+      ref,
+      (snap) => {
+        if (!snap.exists()) {
+          callback(portalVisibilityService.getDefaultSettings());
+          return;
+        }
+        const data = snap.data();
+        callback({
+          showGuestLoginButton: data.showGuestLoginButton !== false,
+          showWebsiteCbtButton: data.showWebsiteCbtButton !== false,
+          showWebsiteRegisterButton: data.showWebsiteRegisterButton !== false,
+          showWebsiteStudentLoginButton:
+            data.showWebsiteStudentLoginButton !== false,
+          allowPublicCbtRegistration: data.allowPublicCbtRegistration !== false,
+        });
+      },
+      (error) => {
+        console.error("Portal settings subscription error:", error);
+        callback(portalVisibilityService.getDefaultSettings());
+      },
+    );
+  },
+};
+
 // Ongoing Batches Service
 const ONGOING_BATCHES_DOC = {
   collection: "siteSettings",
@@ -973,6 +1014,7 @@ export const ongoingBatchesService = {
       const snap = await getDoc(ref);
       if (!snap.exists()) return this.getDefaultBatches();
       const data = snap.data();
+      if (!data || !Array.isArray(data.batches)) return this.getDefaultBatches();
       const batches = this.normalizeBatches(data.batches);
       return batches.length > 0 ? batches : this.getDefaultBatches();
     } catch (error) {
@@ -991,6 +1033,10 @@ export const ongoingBatchesService = {
           return;
         }
         const data = snap.data();
+        if (!data || !Array.isArray(data.batches)) {
+          callback(ongoingBatchesService.getDefaultBatches());
+          return;
+        }
         const batches = ongoingBatchesService.normalizeBatches(data.batches);
         callback(
           batches.length > 0
@@ -1017,7 +1063,7 @@ export const ongoingBatchesService = {
         ref,
         {
           batches: cleaned,
-          updatedAt: new Date(),
+          updatedAt: new Date().toISOString(),
         },
         { merge: true },
       );

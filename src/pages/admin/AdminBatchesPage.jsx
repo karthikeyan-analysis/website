@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import AdminLayout from "../../components/admin/AdminLayout";
 import {
   Calendar,
@@ -40,21 +40,38 @@ export default function AdminBatchesPage() {
   });
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await ongoingBatchesService.getOngoingBatches();
-        setBatches(data);
-      } catch (e) {
-        console.error(e);
-        setError("Could not load ongoing batches.");
-      } finally {
-        setLoading(false);
-      }
+    setLoading(true);
+    setError(null);
+    const unsub = ongoingBatchesService.subscribeOngoingBatches((data) => {
+      setBatches(data);
+      setLoading(false);
+    });
+    return () => {
+      if (typeof unsub === "function") unsub();
     };
-    load();
   }, []);
+
+  const persistBatches = async (
+    updatedBatches,
+    successMsg = "Ongoing Batches table updated and published to the website successfully!",
+  ) => {
+    try {
+      setSaving(true);
+      setError(null);
+      setSuccess(false);
+      await ongoingBatchesService.saveOngoingBatches(updatedBatches);
+      setBatches(updatedBatches);
+      setSuccess(successMsg);
+      setTimeout(() => setSuccess(false), 5000);
+      return true;
+    } catch (e) {
+      console.error("Failed to save ongoing batches:", e);
+      setError(e?.message || "Failed to save batches to website. Please try again.");
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleOpenAdd = () => {
     setEditingIndex(null);
@@ -73,78 +90,76 @@ export default function AdminBatchesPage() {
     setModalOpen(true);
   };
 
-  const handleModalSave = (e) => {
+  const handleModalSave = async (e) => {
     e.preventDefault();
     if (!formData.courseName.trim() || !formData.commencementDate.trim()) {
       alert("Please enter both Course Name and Commencement Date.");
       return;
     }
 
+    let updated;
+    let msg;
     if (editingIndex !== null) {
-      const updated = [...batches];
+      updated = [...batches];
       updated[editingIndex] = {
         ...updated[editingIndex],
         ...formData,
       };
-      setBatches(updated);
+      msg = `Updated "${formData.courseName}" and published to website!`;
     } else {
       const newBatch = {
         id: `batch_${Date.now()}`,
         ...formData,
       };
-      setBatches([...batches, newBatch]);
+      updated = [...batches, newBatch];
+      msg = `Added "${formData.courseName}" and published to website!`;
     }
-    setModalOpen(false);
+
+    const ok = await persistBatches(updated, msg);
+    if (ok) {
+      setModalOpen(false);
+    }
   };
 
-  const handleDelete = (index) => {
-    if (!confirm("Are you sure you want to delete this batch from the table?")) return;
-    setBatches(batches.filter((_, i) => i !== index));
+  const handleDelete = async (index) => {
+    const target = batches[index];
+    if (!confirm(`Are you sure you want to delete "${target?.courseName || 'this batch'}"? It will be removed from the live website immediately.`)) return;
+    const updated = batches.filter((_, i) => i !== index);
+    await persistBatches(updated, "Batch deleted from website successfully!");
   };
 
-  const handleMoveUp = (index) => {
+  const handleMoveUp = async (index) => {
     if (index === 0) return;
     const updated = [...batches];
     const temp = updated[index - 1];
     updated[index - 1] = updated[index];
     updated[index] = temp;
-    setBatches(updated);
+    await persistBatches(updated, "Batch order updated on website!");
   };
 
-  const handleMoveDown = (index) => {
+  const handleMoveDown = async (index) => {
     if (index === batches.length - 1) return;
     const updated = [...batches];
     const temp = updated[index + 1];
     updated[index + 1] = updated[index];
     updated[index] = temp;
-    setBatches(updated);
+    await persistBatches(updated, "Batch order updated on website!");
   };
 
-  const handleResetDefault = () => {
+  const handleResetDefault = async () => {
     if (
       !confirm(
-        "Reset all batches to the default 4 courses? Any unsaved or custom batches will be replaced.",
+        "Reset all batches to the default 4 courses? Any custom batches will be replaced on the live website.",
       )
     ) {
       return;
     }
-    setBatches(JSON.parse(JSON.stringify(DEFAULT_ONGOING_BATCHES)));
+    const defaults = ongoingBatchesService.getDefaultBatches();
+    await persistBatches(defaults, "Batches reset to default 4 courses on website!");
   };
 
   const handleSaveToCloud = async () => {
-    try {
-      setSaving(true);
-      setError(null);
-      setSuccess(false);
-      await ongoingBatchesService.saveOngoingBatches(batches);
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 4000);
-    } catch (e) {
-      console.error(e);
-      setError(e?.message || "Failed to save batches to website.");
-    } finally {
-      setSaving(false);
-    }
+    await persistBatches(batches, "Ongoing Batches table updated and published to the website successfully!");
   };
 
   return (
@@ -422,10 +437,16 @@ export default function AdminBatchesPage() {
                 </Button>
                 <Button
                   type="submit"
+                  disabled={saving}
                   size="sm"
-                  className="bg-brand-navy hover:bg-brand-blue text-white font-bold"
+                  className="bg-brand-navy hover:bg-brand-blue text-white font-bold inline-flex items-center gap-1.5"
                 >
-                  {editingIndex !== null ? "Update Batch" : "Add Batch"}
+                  {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {saving
+                    ? "Saving to website..."
+                    : editingIndex !== null
+                    ? "Update & Publish"
+                    : "Add & Publish"}
                 </Button>
               </div>
             </form>

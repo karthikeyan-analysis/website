@@ -32,6 +32,7 @@ import { Link, NavLink, useLocation } from "react-router-dom";
 import { useUserAuth } from "../../contexts/UserAuthContext";
 import { useCart } from "../../hooks/useCart";
 import { useScrollDirection } from "../../hooks/useScrollDirection";
+import { portalVisibilityService } from "../../services/firebaseService";
 import Container from "../ui/Container";
 import OfferBanner from "./OfferBanner";
 
@@ -74,29 +75,32 @@ function HoverNavDropdown({ menuId, label, items }) {
           aria-hidden
         />
       </button>
-      <div
-        id={`${menuId}-panel`}
-        role="menu"
-        aria-labelledby={`${menuId}-trigger`}
-        className={`absolute left-0 top-full z-[250] pt-2 transition duration-150 ${
-          open
-            ? "pointer-events-auto visible opacity-100"
-            : "pointer-events-none invisible opacity-0"
-        }`}
-      >
-        <div className="w-[13.5rem] overflow-hidden rounded-xl bg-brand-cta/95 p-1 shadow-soft backdrop-blur">
+      {open && (
+        <div
+          id={`${menuId}-panel`}
+          role="menu"
+          aria-labelledby={`${menuId}-trigger`}
+          className="absolute left-0 top-full z-[250] mt-1.5 w-52 overflow-hidden rounded-xl bg-brand-cta/95 p-1 shadow-soft backdrop-blur"
+        >
           {items.map((item) => (
-            <Link
+            <NavLink
               key={item.to}
               to={item.to}
               role="menuitem"
-              className="block rounded-lg px-3 py-2 text-left text-xs font-semibold tracking-tight text-white/95 outline-none transition hover:bg-white/12 hover:text-white focus-visible:bg-white/12 lg:text-[13px]"
+              onClick={() => setOpen(false)}
+              className={({ isActive }) =>
+                `block rounded-lg px-3 py-2 text-xs font-semibold transition ${
+                  isActive
+                    ? "bg-white/20 text-white"
+                    : "text-white/95 hover:bg-white/12 hover:text-white"
+                }`
+              }
             >
               {item.label}
-            </Link>
+            </NavLink>
           ))}
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -106,11 +110,11 @@ function UserDropdown({ user, userProfile, logout }) {
   const ref = useRef(null);
 
   useEffect(() => {
-    const handler = (e) => {
+    const handleClickOutside = (e) => {
       if (ref.current && !ref.current.contains(e.target)) setOpen(false);
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const displayName =
@@ -177,6 +181,16 @@ export default function Header() {
   const isStorePage = location.pathname.startsWith("/book-store");
   const { itemCount, setIsOpen } = useCart();
   const { user, userProfile, logout } = useUserAuth();
+  const [visibilitySettings, setVisibilitySettings] = useState(() =>
+    portalVisibilityService.getDefaultSettings(),
+  );
+
+  useEffect(() => {
+    const unsub = portalVisibilityService.subscribeSettings(
+      setVisibilitySettings,
+    );
+    return () => unsub();
+  }, []);
 
   useEffect(() => {
     document.body.classList.toggle("drawer-open", mobileOpen);
@@ -286,18 +300,20 @@ export default function Header() {
             </NavLink>
 
             <div className="ml-1 flex items-center gap-1">
-              <a
-                href="https://karthikeyananalysisstudycircle.vercel.app/login"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex min-h-9 touch-manipulation items-center justify-center gap-1.5 rounded-md bg-brand-green px-3 py-1.5 text-xs font-bold text-white ring-1 ring-brand-green/60 transition animate-blink hover:bg-brand-green/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-green/50 focus-visible:ring-offset-2 focus-visible:ring-offset-brand-cta"
-              >
-                Student login
-                <ExternalLink
-                  className="size-3.5 shrink-0 opacity-90"
-                  aria-hidden
-                />
-              </a>
+              {visibilitySettings.showWebsiteStudentLoginButton !== false && (
+                <a
+                  href="https://karthikeyananalysisstudycircle.vercel.app/login"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex min-h-9 touch-manipulation items-center justify-center gap-1.5 rounded-md bg-brand-green px-3 py-1.5 text-xs font-bold text-white ring-1 ring-brand-green/60 transition animate-blink hover:bg-brand-green/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-green/50 focus-visible:ring-offset-2 focus-visible:ring-offset-brand-cta"
+                >
+                  Student login
+                  <ExternalLink
+                    className="size-3.5 shrink-0 opacity-90"
+                    aria-hidden
+                  />
+                </a>
+              )}
               <Link
                 to="/book-store"
                 className="inline-flex min-h-9 touch-manipulation items-center justify-center gap-1.5 rounded-md bg-brand-orange px-3 py-1.5 text-xs font-bold text-white ring-1 ring-brand-orange/60 transition animate-blink hover:bg-brand-orange/90"
@@ -417,30 +433,40 @@ export default function Header() {
             </div>
 
             <div className="relative mt-4 flex flex-col gap-2">
-              <a
-                href="https://karthikeyananalysisstudycircle.vercel.app/public/login"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex min-h-10 touch-manipulation items-center justify-center gap-1.5 rounded-lg bg-brand-navy px-3 text-[12px] font-bold text-white shadow-xs transition hover:bg-brand-navy/90 active:bg-brand-navy/80"
-                onClick={() => setMobileOpen(false)}
-              >
-                <UserCheck
-                  className="size-4 shrink-0 text-emerald-300"
-                  aria-hidden
-                />
-                Attend CBT Test (Hall Ticket Login)
-              </a>
-              <div className="grid grid-cols-2 gap-2">
+              {visibilitySettings.showWebsiteCbtButton !== false && (
                 <a
-                  href="https://karthikeyananalysisstudycircle.vercel.app/login"
+                  href="https://karthikeyananalysisstudycircle.vercel.app/public/login"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex min-h-10 touch-manipulation items-center justify-center gap-1.5 rounded-lg bg-brand-green px-3 text-[12px] font-bold text-white ring-1 ring-brand-green/60 transition animate-blink hover:bg-brand-green/90 active:bg-brand-green/80"
+                  className="flex min-h-10 touch-manipulation items-center justify-center gap-1.5 rounded-lg bg-brand-navy px-3 text-[12px] font-bold text-white shadow-xs transition hover:bg-brand-navy/90 active:bg-brand-navy/80"
                   onClick={() => setMobileOpen(false)}
                 >
-                  <GraduationCap className="size-3.5 shrink-0" aria-hidden />
-                  Student Login
+                  <UserCheck
+                    className="size-4 shrink-0 text-emerald-300"
+                    aria-hidden
+                  />
+                  Attend CBT Test (Hall Ticket Login)
                 </a>
+              )}
+              <div
+                className={
+                  visibilitySettings.showWebsiteStudentLoginButton !== false
+                    ? "grid grid-cols-2 gap-2"
+                    : "flex flex-col gap-2"
+                }
+              >
+                {visibilitySettings.showWebsiteStudentLoginButton !== false && (
+                  <a
+                    href="https://karthikeyananalysisstudycircle.vercel.app/login"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex min-h-10 touch-manipulation items-center justify-center gap-1.5 rounded-lg bg-brand-green px-3 text-[12px] font-bold text-white ring-1 ring-brand-green/60 transition animate-blink hover:bg-brand-green/90 active:bg-brand-green/80"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <GraduationCap className="size-3.5 shrink-0" aria-hidden />
+                    Student Login
+                  </a>
+                )}
                 <Link
                   to="/book-store"
                   onClick={() => setMobileOpen(false)}

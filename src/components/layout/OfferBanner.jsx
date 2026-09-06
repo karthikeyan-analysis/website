@@ -1,7 +1,10 @@
 import { ExternalLink, Megaphone, Sparkles, UserCheck } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { offerTickerService } from "../../services/firebaseService";
+import {
+  offerTickerService,
+  portalVisibilityService,
+} from "../../services/firebaseService";
 
 const STUDENT_PORTAL_PUBLIC_LOGIN =
   "https://karthikeyananalysisstudycircle.vercel.app/public/login";
@@ -13,10 +16,19 @@ export default function OfferBanner() {
   const [settings, setSettings] = useState(() =>
     offerTickerService.getDefaultSettings(),
   );
+  const [visibilitySettings, setVisibilitySettings] = useState(() =>
+    portalVisibilityService.getDefaultSettings(),
+  );
 
   useEffect(() => {
     const unsub = offerTickerService.subscribeOfferTicker(setSettings);
-    return () => unsub();
+    const unsubVisibility = portalVisibilityService.subscribeSettings(
+      setVisibilitySettings,
+    );
+    return () => {
+      unsub();
+      unsubVisibility();
+    };
   }, []);
 
   const line = useMemo(
@@ -42,6 +54,9 @@ export default function OfferBanner() {
     color: "rgb(26 54 130 / 0.9)",
     whiteSpace: "nowrap",
   };
+
+  const showCbt = visibilitySettings.showWebsiteCbtButton !== false;
+  const showRegister = visibilitySettings.showWebsiteRegisterButton !== false;
 
   return (
     <div
@@ -101,34 +116,40 @@ export default function OfferBanner() {
           </div>
         </div>
 
-        {/* Action Button: Attend CBT Test using Hall Ticket Credentials */}
-        <div
-          style={{ flexShrink: 0 }}
-          className="flex items-center gap-1.5 pl-1"
-        >
-          <a
-            href={STUDENT_PORTAL_PUBLIC_LOGIN}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 rounded-md bg-brand-navy px-2.5 py-1 text-[11px] font-bold text-white shadow-xs transition hover:bg-brand-navy/90 active:scale-95 ring-1 ring-brand-navy/30 sm:text-xs sm:px-3"
-            title="Attend CBT Mock Test using your Hall Ticket Username & Passcode"
+        {/* Action Buttons: Controlled dynamically from Admin Panel */}
+        {(showCbt || showRegister) && (
+          <div
+            style={{ flexShrink: 0 }}
+            className="flex items-center gap-1.5 pl-1"
           >
-            <UserCheck className="h-3 w-3 text-emerald-300 sm:h-3.5 sm:w-3.5" />
-            <span>Attend Test (Hall Ticket)</span>
-            <ExternalLink className="h-2.5 w-2.5 opacity-80" />
-          </a>
+            {showCbt && (
+              <a
+                href={STUDENT_PORTAL_PUBLIC_LOGIN}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 rounded-md bg-brand-navy px-2.5 py-1 text-[11px] font-bold text-white shadow-xs transition hover:bg-brand-navy/90 active:scale-95 ring-1 ring-brand-navy/30 sm:text-xs sm:px-3"
+                title="Attend CBT Mock Test using your Hall Ticket Username & Passcode"
+              >
+                <UserCheck className="h-3 w-3 text-emerald-300 sm:h-3.5 sm:w-3.5" />
+                <span>Attend Test (Hall Ticket)</span>
+                <ExternalLink className="h-2.5 w-2.5 opacity-80" />
+              </a>
+            )}
 
-          <a
-            href={STUDENT_PORTAL_PUBLIC_REGISTER}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hidden sm:inline-flex items-center gap-1 rounded-md bg-white border border-slate-300 px-2 py-1 text-[11px] font-semibold text-slate-700 shadow-xs hover:bg-slate-50 transition"
-            title="Register for Free Online CBT Mock Test"
-          >
-            <Sparkles className="h-3 w-3 text-amber-500" />
-            <span>Register Test</span>
-          </a>
-        </div>
+            {showRegister && (
+              <a
+                href={STUDENT_PORTAL_PUBLIC_REGISTER}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hidden sm:inline-flex items-center gap-1 rounded-md bg-white border border-slate-300 px-2 py-1 text-[11px] font-semibold text-slate-700 shadow-xs hover:bg-slate-50 transition"
+                title="Register for Free Online CBT Mock Test"
+              >
+                <Sparkles className="h-3 w-3 text-amber-500" />
+                <span>Register Test</span>
+              </a>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
